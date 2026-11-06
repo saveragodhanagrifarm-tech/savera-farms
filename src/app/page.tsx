@@ -22,6 +22,8 @@ import {
   Milk,
   Flame,
   Droplets,
+  Leaf,
+  Sun,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -50,15 +52,15 @@ export default function HomePage() {
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 bg-savera-dark text-savera-saffron px-4 py-1.5 rounded-full text-xs font-bold shadow-sm">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>100% Pure A2 Gir & Sahiwal Desi Cow Milk</span>
+                <span>SAVERA • ORGANIC . NATURAL . TRADITIONAL</span>
               </div>
 
               <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold text-savera-dark leading-[1.15] tracking-tight">
-                Pure Desi Cow Milk, Delivered Fresh to Your Door.
+                A Thoughtfully Curated Range for Everyday Living
               </h1>
 
               <p className="text-base sm:text-lg text-savera-brown/90 leading-relaxed max-w-2xl font-normal">
-                Farm-fresh A2 milk and traditionally crafted products, brought straight from Savera Farms to your family every morning before 7:00 AM.
+                Natural inspiration for simple daily rituals — Farm-fresh A2 milk, Vedic Bilona ghee, Kashmiri saffron, wild Himalayan botanicals, and traditional everyday wellness.
               </p>
 
               {/* CTAs */}
@@ -150,59 +152,81 @@ export default function HomePage() {
         <div className="flex items-end justify-between mb-8">
           <div>
             <span className="text-xs font-bold tracking-widest text-savera-green uppercase">
-              Fresh Farm Range
+              The Savera Collection
             </span>
             <h2 className="font-serif text-3xl font-bold text-savera-dark">Shop by Category</h2>
           </div>
           <Link href="/shop" className="text-xs font-bold text-savera-green hover:underline flex items-center gap-1">
-            <span>Explore All</span>
+            <span>Explore All Products</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Link
+            href="/shop?cat=Herbal%20%26%20Wellness"
+            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-savera-green text-white flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Leaf className="w-7 h-7" />
+            </div>
+            <h3 className="font-serif text-base font-bold text-savera-dark">Herbal & Wellness</h3>
+            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Chai, Shilajit, Kesar & Rasayana</p>
+          </Link>
+
+          <Link
+            href="/shop?cat=Personal%20Care"
+            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-emerald-700 text-emerald-100 flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Sparkles className="w-7 h-7" />
+            </div>
+            <h3 className="font-serif text-base font-bold text-savera-dark">Personal Care</h3>
+            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Face Packs, Ubtan, Soaps & Gulab Jal</p>
+          </Link>
+
+          <Link
+            href="/shop?cat=Traditional%20Staples"
+            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-amber-800 text-amber-200 flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Sun className="w-7 h-7" />
+            </div>
+            <h3 className="font-serif text-base font-bold text-savera-dark">Traditional Staples</h3>
+            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Gud Chana, Desi Khand & Mukhwas</p>
+          </Link>
+
           <Link
             href="/shop?cat=Milk"
-            className="group p-6 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-3"
+            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
           >
-            <div className="w-16 h-16 rounded-2xl bg-savera-dark text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Milk className="w-8 h-8" />
+            <div className="w-14 h-14 rounded-2xl bg-savera-dark text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Milk className="w-7 h-7" />
             </div>
-            <h3 className="font-serif text-lg font-bold text-savera-dark">A2 Desi Cow Milk</h3>
-            <p className="text-xs text-savera-brown/80">Pure 100% Gir & Sahiwal fresh chilled milk</p>
+            <h3 className="font-serif text-base font-bold text-savera-dark">A2 Desi Cow Milk</h3>
+            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Gir & Sahiwal fresh chilled milk</p>
           </Link>
 
           <Link
             href="/shop?cat=Ghee"
-            className="group p-6 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-3"
+            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
           >
-            <div className="w-16 h-16 rounded-2xl bg-savera-brown text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Flame className="w-8 h-8" />
+            <div className="w-14 h-14 rounded-2xl bg-savera-brown text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Flame className="w-7 h-7" />
             </div>
-            <h3 className="font-serif text-lg font-bold text-savera-dark">Vedic Bilona Ghee</h3>
-            <p className="text-xs text-savera-brown/80">Hand-churned from curd, granular & aromatic</p>
-          </Link>
-
-          <Link
-            href="/shop?cat=Dairy"
-            className="group p-6 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-3"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-savera-green text-white flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Sparkles className="w-8 h-8" />
-            </div>
-            <h3 className="font-serif text-lg font-bold text-savera-dark">Paneer & Curd</h3>
-            <p className="text-xs text-savera-brown/80">Soft malai paneer & earthen matka dahi</p>
+            <h3 className="font-serif text-base font-bold text-savera-dark">Vedic Bilona Ghee</h3>
+            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Hand-churned from curd</p>
           </Link>
 
           <Link
             href="/shop?cat=Oils"
-            className="group p-6 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-3"
+            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
           >
-            <div className="w-16 h-16 rounded-2xl bg-amber-700 text-amber-200 flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Droplets className="w-8 h-8" />
+            <div className="w-14 h-14 rounded-2xl bg-amber-700 text-amber-200 flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Droplets className="w-7 h-7" />
             </div>
-            <h3 className="font-serif text-lg font-bold text-savera-dark">Cold Pressed Oils</h3>
-            <p className="text-xs text-savera-brown/80">Wood pressed Kachi Ghani oils</p>
+            <h3 className="font-serif text-base font-bold text-savera-dark">Cold Pressed Oils</h3>
+            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Mustard & Virgin Coconut oils</p>
           </Link>
         </div>
       </section>

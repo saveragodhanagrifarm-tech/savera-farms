@@ -41,11 +41,14 @@ function ShopContent() {
 
   const categories: (CategoryType | 'All')[] = [
     'All',
+    'Herbal & Wellness',
+    'Personal Care',
+    'Traditional Staples',
     'Milk',
     'Ghee',
     'Dairy',
     'Oils',
-    'Farm Products',
+    'Mindful Living',
   ];
 
   const handleCategorySelect = (cat: CategoryType | 'All') => {
@@ -96,11 +99,11 @@ function ShopContent() {
       <div className="bg-savera-dark text-savera-cream rounded-3xl p-8 sm:p-10 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <span className="text-xs font-bold text-savera-saffron uppercase tracking-widest block mb-1">
-            Pure Traditional Grocery
+            Organic • Natural • Traditional
           </span>
-          <h1 className="font-serif text-3xl sm:text-4xl font-bold">Savera Farm Product Catalog</h1>
+          <h1 className="font-serif text-3xl sm:text-4xl font-bold">The Savera Product Range</h1>
           <p className="text-xs sm:text-sm text-savera-cream/80 mt-1 max-w-xl leading-relaxed">
-            Explore 100% pure A2 milk, Vedic Bilona ghee, fresh paneer, and cold-pressed oils straight from our organic estate.
+            A thoughtfully curated range for everyday living — Natural inspiration for simple daily rituals, pure A2 dairy, and traditional wellness.
           </p>
         </div>
         <div className="flex items-center gap-2.5 bg-savera-green/40 p-4 rounded-2xl border border-savera-saffron/30 shrink-0">

@@ -161,7 +161,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load stored data on mount
   useEffect(() => {
-    const rawStoredProducts = getStoredData<Product[]>('savera_products_v2', SEED_PRODUCTS);
+    const rawStoredProducts = getStoredData<Product[]>('savera_products_v3', SEED_PRODUCTS);
     const storedMap = new Map((rawStoredProducts || []).map((p) => [p.id, p]));
     const mergedProducts = SEED_PRODUCTS.map((sp) => {
       const custom = storedMap.get(sp.id);

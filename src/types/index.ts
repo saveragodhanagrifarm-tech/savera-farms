@@ -1,6 +1,15 @@
 // Types for Savera Farms Platform
 
-export type CategoryType = 'Milk' | 'Ghee' | 'Oils' | 'Dairy' | 'Farm Products';
+export type CategoryType =
+  | 'Milk'
+  | 'Ghee'
+  | 'Oils'
+  | 'Dairy'
+  | 'Farm Products'
+  | 'Herbal & Wellness'
+  | 'Personal Care'
+  | 'Traditional Staples'
+  | 'Mindful Living';
 
 export interface ProductVariant {
   id: string;

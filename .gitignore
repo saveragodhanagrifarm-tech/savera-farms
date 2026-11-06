@@ -35,3 +35,5 @@ scratch/
 Thumbs.db
 desktop.ini
 $RECYCLE.BIN/
+
+*.tsbuildinfo

@@ -90,7 +90,7 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
       <div className="bg-savera-dark text-savera-cream text-xs py-2 px-4 flex items-center justify-between text-center font-medium">
         <div className="hidden md:flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-savera-saffron" />
-          <span>Fresh A2 Desi Cow Milk — Milked & Bottled Daily at Savera Farms</span>
+          <span>SAVERA • ORGANIC . NATURAL . TRADITIONAL — Curated for Everyday Living</span>
         </div>
         <div className="mx-auto md:mx-0 flex items-center gap-2">
           <Truck className="w-3.5 h-3.5 text-savera-lightGreen" />
@@ -347,21 +347,24 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
 
         {/* Secondary Category Nav Ribbon */}
         <nav className="hidden lg:flex items-center justify-between border-t border-savera-dark/5 py-2.5 text-xs font-semibold text-savera-dark/80">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
             <Link href="/" className={`hover:text-savera-dark transition ${pathname === '/' ? 'text-savera-green font-bold' : ''}`}>
               Home
             </Link>
+            <Link href="/shop" className={`hover:text-savera-green transition ${pathname === '/shop' ? 'text-savera-green font-bold' : ''}`}>
+              All Products
+            </Link>
+            <Link href="/shop?cat=Herbal%20%26%20Wellness" className="hover:text-savera-green transition">
+              Herbal & Wellness
+            </Link>
+            <Link href="/shop?cat=Personal%20Care" className="hover:text-savera-green transition">
+              Personal Care
+            </Link>
+            <Link href="/shop?cat=Traditional%20Staples" className="hover:text-savera-green transition">
+              Traditional Staples
+            </Link>
             <Link href="/shop?cat=Milk" className="hover:text-savera-green transition">
-              A2 Milk
-            </Link>
-            <Link href="/shop?cat=Ghee" className="hover:text-savera-green transition">
-              A2 Bilona Ghee
-            </Link>
-            <Link href="/shop?cat=Dairy" className="hover:text-savera-green transition">
-              Paneer & Curd
-            </Link>
-            <Link href="/shop?cat=Oils" className="hover:text-savera-green transition">
-              Cold Pressed Oils
+              A2 Milk & Ghee
             </Link>
             <Link href="/subscriptions" className="text-savera-brown font-bold hover:underline flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-savera-saffron" />
@@ -371,17 +374,17 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
               My Orders
             </Link>
             <Link href="/farm-story" className="hover:text-savera-green transition">
-              Our Farm Story
+              Our Story
             </Link>
             <Link href="/about" className="hover:text-savera-green transition">
               About Us
             </Link>
             <Link href="/contact" className="hover:text-savera-green transition">
-              Contact Us
+              Contact
             </Link>
           </div>
           <div className="text-savera-green font-semibold flex items-center gap-1">
-            <span>🌿 100% Pure Organic Farm Direct</span>
+            <span>🌿 Organic • Natural • Traditional</span>
           </div>
         </nav>
       </div>
