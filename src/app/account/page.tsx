@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { openRazorpayCheckout } from '@/lib/razorpay';
+import { supabase } from '@/lib/supabase';
 import {
   User,
   Wallet,
@@ -70,11 +72,54 @@ export default function CustomerAccountPage() {
     setTimeout(() => setCopied(false), 3000);
   };
 
-  const handleRechargeSubmit = (e: React.FormEvent) => {
+  const handleRechargeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rechargeAmount <= 0) return;
-    rechargeWallet(rechargeAmount);
+
     setShowRechargeModal(false);
+
+    await openRazorpayCheckout({
+      amountInRupees: rechargeAmount,
+      customerName: customer.fullName,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+      orderNumber: `WAL-${Math.floor(10000 + Math.random() * 90000)}`,
+      onSuccess: (paymentId) => {
+        rechargeWallet(rechargeAmount);
+        addToast(
+          'Wallet Recharged Successfully! 🎉',
+          `₹${rechargeAmount} added to your Savera Wallet. Ref ID: ${paymentId}`,
+          'success'
+        );
+        // Sync wallet transaction to Supabase
+        try {
+          supabase.from('orders').insert({
+            id: 'WAL-' + Date.now(),
+            order_number: 'WAL-' + Math.floor(10000 + Math.random() * 90000),
+            customer_name: customer.fullName,
+            customer_phone: customer.phone,
+            delivery_address: {},
+            items: [
+              {
+                productId: 'wallet-recharge',
+                productName: 'Savera Wallet Top-up',
+                price: rechargeAmount,
+                quantity: 1,
+              },
+            ],
+            total_amount: rechargeAmount,
+            payment_method: 'Online Payment Gateway',
+            payment_status: 'Paid',
+            status: 'Completed',
+          }).then(({ error }) => {
+            if (error) console.warn('Wallet recharge sync note:', error.message);
+          });
+        } catch (e) {}
+      },
+      onFailure: (err) => {
+        addToast('Payment Cancelled', 'Wallet recharge was not completed.', 'info');
+      },
+    });
   };
 
   const handleSaveAddress = (e: React.FormEvent) => {

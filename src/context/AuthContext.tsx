@@ -27,6 +27,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; profile?: UserProfile | null }>;
   signUp: (email: string, password: string, fullName: string, phone?: string, role?: 'customer' | 'admin') => Promise<{ error: Error | null; user?: User | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   showAuthModal: boolean;
@@ -167,6 +168,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null, user: data.user };
   };
 
+  const signInWithGoogle = async () => {
+    setIsLoading(true);
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://savera-farms.pages.dev';
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${origin}/account/`,
+      },
+    });
+    if (error) {
+      setIsLoading(false);
+      return { error };
+    }
+    return { error: null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -199,6 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut,
         refreshProfile,
         showAuthModal,
