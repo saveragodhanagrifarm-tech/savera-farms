@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { SupportTicket } from '@/types';
 import {
   DollarSign,
   ShoppingBag,
@@ -57,7 +58,7 @@ export default function AdminDashboardPage() {
   const [ticketFilter, setTicketFilter] = useState<'All' | 'Open' | 'In Progress' | 'Resolved'>('All');
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<(typeof supportTickets)[0] | null>(null);
-  const [newStatus, setNewStatus] = useState<'Open' | 'In Progress' | 'Resolved' | 'Closed'>('Resolved');
+  const [newStatus, setNewStatus] = useState<SupportTicket['status']>('Resolved');
   const [agentNotes, setAgentNotes] = useState('');
   const [refundAmount, setRefundAmount] = useState(0);
 
@@ -472,6 +473,7 @@ export default function AdminDashboardPage() {
                   >
                     <option value="Open">Open</option>
                     <option value="In Progress">In Progress</option>
+                    <option value="Waiting">Waiting</option>
                     <option value="Resolved">Resolved</option>
                     <option value="Closed">Closed</option>
                   </select>
