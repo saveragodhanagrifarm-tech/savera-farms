@@ -25,7 +25,22 @@ import {
 } from 'lucide-react';
 
 export default function OrderTrackingPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const [resolvedId, setResolvedId] = useState<string>((params?.id as string) || '');
+
+  useEffect(() => {
+    if (params?.id) {
+      setResolvedId(params.id as string);
+    } else if (typeof window !== 'undefined') {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const last = parts[parts.length - 1];
+      if (last && last !== 'orders') {
+        setResolvedId(last);
+      }
+    }
+  }, [params?.id]);
+
+  const id = resolvedId || (params?.id as string) || '';
   const router = useRouter();
   const { orders, cancelOrder, addToCart, products, addToast } = useApp();
 
