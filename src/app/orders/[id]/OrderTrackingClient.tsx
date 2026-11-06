@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { supabase } from '@/lib/supabase';
 import { OrderStatus } from '@/types';
 import {
   CheckCircle2,
@@ -31,8 +32,44 @@ export default function OrderTrackingPage() {
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('Change of plans / Travelling');
+  const [dbOrder, setDbOrder] = useState<any>(null);
 
-  const order = orders.find((o) => o.id === id || o.orderNumber === id) || orders[0];
+  useEffect(() => {
+    if (id && !orders.some((o) => o.id === id || o.orderNumber === id)) {
+      supabase
+        .from('orders')
+        .select('*')
+        .or(`id.eq.${id},order_number.eq.${id}`)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setDbOrder({
+              id: data.id,
+              orderNumber: data.order_number,
+              customerName: data.customer_name,
+              customerPhone: data.customer_phone,
+              deliveryAddress: data.delivery_address || {},
+              items: data.items || [],
+              subtotal: data.subtotal || 0,
+              discount: data.discount || 0,
+              deliveryFee: data.delivery_fee || 0,
+              totalAmount: data.total_amount || 0,
+              paymentMethod: data.payment_method || 'Online',
+              paymentStatus: data.payment_status || 'Paid',
+              status: data.status || 'Order Placed',
+              deliveryDate: data.delivery_date,
+              deliverySlot: data.delivery_slot,
+              otp: data.otp || '4821',
+              driverName: data.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
+              driverPhone: data.driver_phone || '+91 98112 33445',
+              createdAt: data.created_at,
+            });
+          }
+        });
+    }
+  }, [id, orders]);
+
+  const order = orders.find((o) => o.id === id || o.orderNumber === id) || dbOrder || orders[0];
 
   if (!order) {
     return (
@@ -67,7 +104,7 @@ export default function OrderTrackingPage() {
   };
 
   const handleReorder = () => {
-    order.items.forEach((item) => {
+    order.items.forEach((item: any) => {
       const prod = products.find((p) => p.id === item.productId);
       if (prod) {
         addToCart(prod, item.variantId, item.quantity);
@@ -247,7 +284,7 @@ export default function OrderTrackingPage() {
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-savera-dark/10 shadow-soft space-y-4">
         <h3 className="font-serif text-lg font-bold text-savera-dark">Ordered Items</h3>
         <div className="divide-y divide-savera-dark/10">
-          {order.items.map((item, idx) => (
+          {order.items.map((item: any, idx: number) => (
             <div key={idx} className="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
               <div className="flex items-center gap-3">
                 <img src={item.image} alt={item.productName} className="w-12 h-12 rounded-xl object-cover border" />

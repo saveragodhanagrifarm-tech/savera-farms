@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -46,6 +46,15 @@ export default function ProductDetailPage() {
   const [subModalProduct, setSubModalProduct] = useState<typeof product | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'process' | 'reviews' | 'faq'>('details');
   const [justAdded, setJustAdded] = useState(false);
+
+  // Reset state when navigating between products
+  useEffect(() => {
+    if (product?.variants?.length) {
+      setSelectedVariantId(product.variants[0].id);
+      setActiveImageIndex(0);
+      setQuantity(1);
+    }
+  }, [id, product?.id]);
 
   // Review Form Modal
   const [showReviewModal, setShowReviewModal] = useState(false);

@@ -190,6 +190,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs(getStoredData('savera_audit_v2', SEED_AUDIT_LOGS));
     setReviews(getStoredData('savera_reviews_v2', SEED_REVIEWS));
     isHydrated.current = true;
+
+    // Real-time Cloud Hydration from Supabase
+    try {
+      supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (data && !error && data.length > 0) {
+            setOrders((prev) => {
+              const cloudOrders: Order[] = data.map((d: any) => ({
+                id: d.id,
+                orderNumber: d.order_number,
+                customerId: d.user_id || 'cust-101',
+                customerName: d.customer_name || 'Savera Customer',
+                customerPhone: d.customer_phone || '+91 98765 43210',
+                items: d.items || [],
+                subtotal: Number(d.subtotal) || 0,
+                deliveryFee: Number(d.delivery_fee) || 0,
+                discount: Number(d.discount) || 0,
+                tax: 0,
+                totalAmount: Number(d.total_amount) || 0,
+                paymentMethod: (d.payment_method as any) || 'UPI',
+                paymentStatus: (d.payment_status as any) || 'Paid',
+                deliveryAddress: d.delivery_address || {},
+                deliveryDate: d.delivery_date || '',
+                deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
+                status: (d.status as any) || 'Order Placed',
+                driverName: d.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
+                driverPhone: d.driver_phone || '+91 98112 33445',
+                otp: d.otp || '4821',
+                createdAt: d.created_at || new Date().toISOString(),
+                updatedAt: d.created_at || new Date().toISOString(),
+              }));
+              const merged = [...cloudOrders];
+              for (const localOrd of prev) {
+                if (!cloudOrders.some((c) => c.id === localOrd.id || c.orderNumber === localOrd.orderNumber)) {
+                  merged.push(localOrd);
+                }
+              }
+              return merged;
+            });
+          }
+        });
+
+      supabase
+        .from('subscriptions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (data && !error && data.length > 0) {
+            setSubscriptions((prev) => {
+              const cloudSubs: MilkSubscription[] = data.map((d: any) => ({
+                id: d.id,
+                customerId: d.user_id || 'cust-101',
+                customerName: d.customer_name || 'Savera Customer',
+                customerPhone: d.customer_phone || '+91 98765 43210',
+                productId: d.product_id,
+                productName: d.product_name,
+                variantId: d.variant_id || 'var-1L',
+                variantName: d.variant_name || '1 Litre Glass Bottle',
+                quantityPerDelivery: d.quantity || 1,
+                pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : 95,
+                frequency: (d.schedule_type as any) || 'Daily',
+                customDays: d.custom_days || [],
+                deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
+                deliveryAddress: d.delivery_address || {},
+                startDate: d.start_date || new Date().toISOString().split('T')[0],
+                status: (d.status as any) || 'Active',
+                skippedDates: [],
+                nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+                monthlyEstimate: Number(d.monthly_cost) || 2850,
+              }));
+              const merged = [...cloudSubs];
+              for (const localSub of prev) {
+                if (!cloudSubs.some((c) => c.id === localSub.id)) {
+                  merged.push(localSub);
+                }
+              }
+              return merged;
+            });
+          }
+        });
+    } catch (e) {}
   }, []);
 
   // Save to storage (only after hydration)
@@ -439,6 +523,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (s.id === subId) {
           const nextStatus = s.status === 'Active' ? 'Paused' : 'Active';
           addToast('Subscription Updated', `Subscription ${subId} is now ${nextStatus}.`, 'info');
+          try {
+            supabase.from('subscriptions').update({ status: nextStatus }).eq('id', subId).then();
+          } catch (e) {}
           return { ...s, status: nextStatus };
         }
         return s;
@@ -466,6 +553,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     addToast('Subscription Cancelled', 'Your milk subscription has been cancelled.', 'info');
     logAuditAction('Subscription Cancelled', subId, 'Customer cancelled subscription');
+    try {
+      supabase.from('subscriptions').update({ status: 'Cancelled' }).eq('id', subId).then();
+    } catch (e) {}
   };
 
   const updateSubscription = (subId: string, updates: Partial<MilkSubscription>) => {
@@ -474,6 +564,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     addToast('Subscription Updated', 'Delivery preferences updated successfully.', 'success');
     logAuditAction('Subscription Modified', subId, 'Updated parameters');
+    try {
+      const dbUpdates: any = {};
+      if (updates.status) dbUpdates.status = updates.status;
+      if (updates.quantityPerDelivery) dbUpdates.quantity = updates.quantityPerDelivery;
+      if (updates.frequency) dbUpdates.schedule_type = updates.frequency;
+      if (updates.deliverySlot) dbUpdates.delivery_slot = updates.deliverySlot;
+      if (updates.monthlyEstimate) dbUpdates.monthly_cost = updates.monthlyEstimate;
+      if (Object.keys(dbUpdates).length > 0) {
+        supabase.from('subscriptions').update(dbUpdates).eq('id', subId).then();
+      }
+    } catch (e) {}
   };
 
   // Orders
@@ -517,6 +618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       rewardPoints: prev.rewardPoints + earnedPoints,
       totalOrders: prev.totalOrders + 1,
       totalSpent: prev.totalSpent + cartTotal,
+      walletBalance: paymentMethod === 'Wallets' ? Math.max(0, prev.walletBalance - cartTotal) : prev.walletBalance,
     }));
 
     clearCart();
@@ -562,6 +664,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     addToast('Order Status Updated', `Order ${orderId} marked as ${status}.`, 'info');
     logAuditAction('Order Status Change', orderId, `Updated status to ${status}`);
+    try {
+      supabase.from('orders').update({ status }).or(`id.eq.${orderId},order_number.eq.${orderId}`).then();
+    } catch (e) {}
   };
 
   const cancelOrder = (orderId: string, reason?: string) => {
@@ -570,6 +675,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     addToast('Order Cancelled', `Order ${orderId} has been cancelled.`, 'info');
     logAuditAction('Order Cancelled', orderId, reason || 'Customer requested cancellation');
+    try {
+      supabase.from('orders').update({ status: 'Cancelled' }).or(`id.eq.${orderId},order_number.eq.${orderId}`).then();
+    } catch (e) {}
   };
 
   // Batches & Production

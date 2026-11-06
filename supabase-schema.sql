@@ -138,3 +138,4 @@ DROP POLICY IF EXISTS "Allow update subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow update subscriptions"
   ON public.subscriptions FOR UPDATE
   USING (true);
+

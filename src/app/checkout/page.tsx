@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Phone,
   FileText,
+  Wallet,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { openRazorpayCheckout } from '@/lib/razorpay';
@@ -64,7 +65,7 @@ export default function CheckoutPage() {
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>('5:00 AM - 7:00 AM');
   const [deliveryNotes, setDeliveryNotes] = useState('Leave in milk cooler box at main entrance.');
   const [paymentMethod, setPaymentMethod] = useState<
-    'UPI' | 'Credit Card' | 'Debit Card' | 'Net Banking' | 'Cash on Delivery'
+    'UPI' | 'Credit Card' | 'Debit Card' | 'Net Banking' | 'Wallets' | 'Cash on Delivery'
   >('UPI');
 
   // Payment inputs
@@ -114,6 +115,32 @@ export default function CheckoutPage() {
       pincode,
       type: addressType,
     };
+
+    if (paymentMethod === 'Wallets') {
+      if (customer.walletBalance < cartTotal) {
+        addToast(
+          'Insufficient Wallet Balance',
+          `Your wallet balance is ₹${customer.walletBalance}. Please recharge or select UPI/Card.`,
+          'error'
+        );
+        return;
+      }
+      const newOrder = placeOrder(addressToUse, deliverySlot, 'Wallets');
+      addToast(
+        'Paid with Savera Wallet! 🎉',
+        `₹${cartTotal} debited from your wallet. Remaining: ₹${customer.walletBalance - cartTotal}`,
+        'success'
+      );
+      try {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+        });
+      } catch (e) {}
+      router.push(`/orders/${newOrder.id}`);
+      return;
+    }
 
     if (paymentMethod !== 'Cash on Delivery') {
       openRazorpayCheckout({
@@ -394,6 +421,7 @@ export default function CheckoutPage() {
 
             <div className="space-y-3">
               {[
+                { id: 'Wallets', title: `Savera Wallet (Balance: ₹${customer.walletBalance})`, icon: Wallet, badge: customer.walletBalance >= cartTotal ? '1-Click Pay' : 'Low Balance' },
                 { id: 'UPI', title: 'UPI Instant (GPay / PhonePe / Paytm / BHIM)', icon: QrCode },
                 { id: 'Credit Card', title: 'Credit / Debit Card (Visa, Mastercard, RuPay)', icon: CreditCard },
                 { id: 'Net Banking', title: 'Net Banking (All Indian Banks)', icon: Building },
@@ -414,7 +442,14 @@ export default function CheckoutPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Icon className="w-5 h-5 text-savera-green" />
-                        <span className="text-xs font-bold">{p.title}</span>
+                        <div>
+                          <span className="text-xs font-bold block">{p.title}</span>
+                          {p.badge && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${p.badge === '1-Click Pay' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                              {p.badge}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {isSelected && <CheckCircle2 className="w-4 h-4 text-savera-green" />}
                     </div>
