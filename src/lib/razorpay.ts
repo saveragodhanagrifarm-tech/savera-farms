@@ -1,6 +1,6 @@
 export interface RazorpayOptions {
   key: string;
-  amount: number; // in paise (e.g. 100 INR = 10000 paise)
+  amount: number;
   currency: string;
   name: string;
   description: string;
@@ -31,6 +31,15 @@ declare global {
       open: () => void;
       close: () => void;
     };
+    __SAVERA_OPEN_PAYMENT_MODAL?: (data: {
+      amount: number;
+      orderNumber: string;
+      customerName: string;
+      customerPhone?: string;
+      customerEmail?: string;
+      onSuccess: (paymentId: string) => void;
+      onFailure: (err: any) => void;
+    }) => void;
   }
 }
 
@@ -65,17 +74,48 @@ export async function openRazorpayCheckout({
   onSuccess: (paymentId: string) => void;
   onFailure: (err: any) => void;
 }) {
+  const key = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '';
+  const isRealRazorpayKey = key.startsWith('rzp_live_') || (key.startsWith('rzp_test_') && key !== 'rzp_test_51MockSaveraKey');
+
+  // If user hasn't added their real Razorpay key yet, launch the built-in Savera Pay Gateway
+  if (!isRealRazorpayKey) {
+    if (typeof window !== 'undefined' && window.__SAVERA_OPEN_PAYMENT_MODAL) {
+      window.__SAVERA_OPEN_PAYMENT_MODAL({
+        amount: amountInRupees,
+        orderNumber,
+        customerName,
+        customerEmail,
+        customerPhone,
+        onSuccess,
+        onFailure,
+      });
+      return;
+    }
+  }
+
+  // Official Razorpay Integration
   const loaded = await loadRazorpayScript();
   if (!loaded || !window.Razorpay) {
-    onFailure(new Error('Razorpay SDK failed to load. Please check your internet connection.'));
+    // Graceful fallback to built-in gateway
+    if (typeof window !== 'undefined' && window.__SAVERA_OPEN_PAYMENT_MODAL) {
+      window.__SAVERA_OPEN_PAYMENT_MODAL({
+        amount: amountInRupees,
+        orderNumber,
+        customerName,
+        customerEmail,
+        customerPhone,
+        onSuccess,
+        onFailure,
+      });
+      return;
+    }
+    onFailure(new Error('Payment gateway failed to initialize.'));
     return;
   }
 
-  const key = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_51MockSaveraKey';
-
   const options: RazorpayOptions = {
     key,
-    amount: Math.round(amountInRupees * 100), // convert to paise
+    amount: Math.round(amountInRupees * 100),
     currency: 'INR',
     name: 'Savera Godhan Agri Farm',
     description: `Order #${orderNumber} — Farm Fresh A2 Produce`,
@@ -86,7 +126,7 @@ export async function openRazorpayCheckout({
       contact: customerPhone || '9876543210',
     },
     theme: {
-      color: '#1B3B2B', // Savera Dark Green
+      color: '#1B3B2B',
     },
     handler: (response) => {
       onSuccess(response.razorpay_payment_id);

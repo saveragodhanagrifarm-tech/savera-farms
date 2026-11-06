@@ -10,6 +10,7 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { QuickCartDrawer } from '@/components/shop/QuickCartDrawer';
 import { ToastContainer } from '@/components/common/ToastContainer';
 import { AuthModal } from '@/components/common/AuthModal';
+import { PaymentGatewayModalHost } from '@/components/common/PaymentGatewayModalHost';
 import './globals.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <QuickCartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
             <ToastContainer />
             <AuthModal />
+            <PaymentGatewayModalHost />
           </AppProvider>
         </AuthProvider>
       </body>

@@ -38,6 +38,7 @@ import {
   getStoredData,
   setStoredData,
 } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export interface ToastMessage {
   id: string;
@@ -403,6 +404,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSubscriptions((prev) => [newSub, ...prev]);
     addToast('Milk Subscription Activated!', `Your ${newSub.frequency} delivery is scheduled starting tomorrow.`, 'success');
     logAuditAction('New Subscription', newSub.id, `Created subscription for ${newSub.productName}`);
+
+    // Asynchronously sync to Supabase
+    try {
+      supabase.from('subscriptions').insert({
+        id: newSub.id,
+        customer_name: customer.fullName,
+        customer_phone: customer.phone,
+        delivery_address: customer.addresses[0] || {},
+        product_id: newSub.productId,
+        product_name: newSub.productName,
+        variant_id: newSub.variantId,
+        variant_name: newSub.variantName,
+        quantity: newSub.quantityPerDelivery,
+        schedule_type: newSub.frequency,
+        custom_days: newSub.customDays || [],
+        start_date: newSub.startDate,
+        delivery_slot: newSub.deliverySlot,
+        status: newSub.status,
+        monthly_cost: newSub.monthlyEstimate,
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase subscription sync note:', error.message);
+      });
+    } catch (e) {}
   };
 
   const togglePauseSubscription = (subId: string) => {
@@ -494,6 +518,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearCart();
     addToast('Order Placed Successfully!', `Order #${newOrder.orderNumber} confirmed for delivery tomorrow.`, 'success');
     logAuditAction('New Order Placed', newOrder.orderNumber, `Order placed for ₹${cartTotal}`);
+
+    // Asynchronously sync to Supabase database
+    try {
+      supabase.from('orders').insert({
+        id: newOrder.id,
+        order_number: newOrder.orderNumber,
+        customer_name: newOrder.customerName,
+        customer_phone: newOrder.customerPhone,
+        delivery_address: newOrder.deliveryAddress,
+        items: newOrder.items,
+        subtotal: newOrder.subtotal,
+        discount: newOrder.discount,
+        delivery_fee: newOrder.deliveryFee,
+        total_amount: newOrder.totalAmount,
+        payment_method: newOrder.paymentMethod,
+        payment_status: newOrder.paymentStatus,
+        status: newOrder.status,
+        delivery_date: newOrder.deliveryDate,
+        delivery_slot: newOrder.deliverySlot,
+        otp: newOrder.otp,
+        driver_name: newOrder.driverName,
+        driver_phone: newOrder.driverPhone,
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase order sync note:', error.message);
+      });
+    } catch (e) {}
+
     return newOrder;
   };
 
