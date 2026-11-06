@@ -157,7 +157,7 @@ export function AuthModal() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Priya Sharma"
+                      placeholder="e.g. Arin Garg"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl pl-9 pr-3 py-2.5 text-savera-dark focus:outline-none focus:border-savera-green"
@@ -217,7 +217,7 @@ export function AuthModal() {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. priya@example.com"
+                  placeholder="e.g. yourname@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl pl-9 pr-3 py-2.5 text-savera-dark focus:outline-none focus:border-savera-green"

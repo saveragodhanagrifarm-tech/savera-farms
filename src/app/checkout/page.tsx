@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -60,6 +60,18 @@ export default function CheckoutPage() {
   const [state, setState] = useState('Haryana');
   const [pincode, setPincode] = useState(selectedPincode);
   const [addressType, setAddressType] = useState<'Home' | 'Work' | 'Other'>('Home');
+
+  useEffect(() => {
+    if (customer.fullName && customer.fullName !== 'Savera Guest') {
+      setFullName(customer.fullName);
+    }
+    if (customer.phone && customer.phone !== '+91 98765 43210') {
+      setMobileNumber(customer.phone);
+    }
+    if (customer.addresses.length > 0 && !selectedAddressId) {
+      setSelectedAddressId(customer.addresses[0].id);
+    }
+  }, [customer.fullName, customer.phone, customer.addresses, selectedAddressId]);
 
   // Delivery Slot & Payment state
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>('5:00 AM - 7:00 AM');

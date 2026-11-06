@@ -17,6 +17,8 @@ export interface UserProfile {
     city?: string;
     pincode?: string;
   };
+  wallet_balance?: number;
+  reward_points?: number;
   created_at?: string;
 }
 

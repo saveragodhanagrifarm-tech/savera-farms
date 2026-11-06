@@ -1108,7 +1108,7 @@ export const SEED_SUBSCRIPTIONS: MilkSubscription[] = [
   {
     id: 'SUB-1001',
     customerId: 'cust-101',
-    customerName: 'Priya Sharma',
+    customerName: 'Savera Customer',
     customerPhone: '+91 98765 43210',
     productId: 'prod-a2-milk',
     productName: 'A2 Desi Cow Milk',
@@ -1120,7 +1120,7 @@ export const SEED_SUBSCRIPTIONS: MilkSubscription[] = [
     deliverySlot: '5:00 AM - 7:00 AM',
     deliveryAddress: {
       id: 'addr-1',
-      fullName: 'Priya Sharma',
+      fullName: 'Savera Customer',
       mobileNumber: '9876543210',
       houseFlat: 'B-402, Sunshine Apartments',
       street: 'Golf Course Road, Sector 54',
@@ -1175,7 +1175,7 @@ export const SEED_ORDERS: Order[] = [
     id: 'ORD-9821',
     orderNumber: 'SAV-9821',
     customerId: 'cust-101',
-    customerName: 'Priya Sharma',
+    customerName: 'Savera Customer',
     customerPhone: '+91 98765 43210',
     items: [
       { productId: 'prod-a2-milk', productName: 'A2 Desi Cow Milk', variantId: 'var-a2m-1l', variantName: '1 Litre Glass Bottle', price: 92, quantity: 1, isSubscription: true, image: '/images/milk-bottle.png' },
@@ -1191,7 +1191,7 @@ export const SEED_ORDERS: Order[] = [
     paymentStatus: 'Paid',
     deliveryAddress: {
       id: 'addr-1',
-      fullName: 'Priya Sharma',
+      fullName: 'Savera Customer',
       mobileNumber: '9876543210',
       houseFlat: 'B-402, Sunshine Apartments',
       street: 'Golf Course Road, Sector 54',
@@ -1362,30 +1362,16 @@ export const SEED_COUPONS: Coupon[] = [
 ];
 
 export const SEED_CUSTOMER: CustomerProfile = {
-  id: 'cust-101',
-  fullName: 'Priya Sharma',
+  id: 'cust-guest',
+  fullName: 'Savera Guest',
   phone: '+91 98765 43210',
-  email: 'priya.sharma@example.com',
-  walletBalance: 350,
-  rewardPoints: 180,
-  referralCode: 'SAV-PRIYA100',
-  totalOrders: 14,
-  totalSpent: 4820,
-  addresses: [
-    {
-      id: 'addr-1',
-      fullName: 'Priya Sharma',
-      mobileNumber: '9876543210',
-      houseFlat: 'B-402, Sunshine Apartments',
-      street: 'Golf Course Road, Sector 54',
-      area: 'DLF Phase 5',
-      landmark: 'Near One Horizon Center',
-      city: 'Gurugram',
-      state: 'Haryana',
-      pincode: '122002',
-      type: 'Home'
-    }
-  ]
+  email: 'guest@saverafarms.com',
+  walletBalance: 0,
+  rewardPoints: 50,
+  referralCode: 'SAV-WELCOME100',
+  totalOrders: 0,
+  totalSpent: 0,
+  addresses: []
 };
 
 export const SEED_REVIEWS: Review[] = [

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { openRazorpayCheckout } from '@/lib/razorpay';
@@ -60,6 +60,14 @@ export default function CustomerAccountPage() {
   const [profileName, setProfileName] = useState(customer.fullName);
   const [profilePhone, setProfilePhone] = useState(customer.phone);
   const [profileEmail, setProfileEmail] = useState(customer.email);
+
+  useEffect(() => {
+    setProfileName(customer.fullName);
+    setProfilePhone(customer.phone);
+    setProfileEmail(customer.email);
+    setNewFullName(customer.fullName);
+    setNewMobile(customer.phone);
+  }, [customer.fullName, customer.phone, customer.email]);
 
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketCategory, setTicketCategory] = useState<any>('Subscription Issue');

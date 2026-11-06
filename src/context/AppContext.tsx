@@ -39,6 +39,7 @@ import {
   setStoredData,
 } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 export interface ToastMessage {
   id: string;
@@ -137,6 +138,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, profile } = useAuth();
+
   // Local state initialized from localStorage/seed
   const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
   const [cart, setCart] = useState<OrderItem[]>([]);
@@ -190,91 +193,149 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs(getStoredData('savera_audit_v2', SEED_AUDIT_LOGS));
     setReviews(getStoredData('savera_reviews_v2', SEED_REVIEWS));
     isHydrated.current = true;
+  }, []);
 
-    // Real-time Cloud Hydration from Supabase
-    try {
+  // Synchronize authenticated user identity, orders, and subscriptions
+  useEffect(() => {
+    if (user) {
+      const realName = profile?.full_name || (user.user_metadata as any)?.full_name || user.email?.split('@')[0] || 'Savera Member';
+      const realPhone = profile?.phone || (user.user_metadata as any)?.phone || '';
+      const realEmail = user.email || profile?.email || '';
+      const codeBase = realName.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5) || 'SAVERA';
+      const dynamicReferral = `SAV-${codeBase}100`;
+
+      setCustomer((prev) => {
+        let updatedAddresses = prev.addresses;
+        if (
+          updatedAddresses.length === 0 ||
+          updatedAddresses.some((a) => a.fullName === 'Priya Sharma' || a.fullName === 'Savera Guest' || a.fullName === 'Savera Customer')
+        ) {
+          updatedAddresses = [
+            {
+              id: 'addr-user-' + user.id.slice(0, 6),
+              fullName: realName,
+              mobileNumber: realPhone || '9876543210',
+              houseFlat: profile?.address?.houseFlat || 'Flat 4B',
+              street: profile?.address?.street || 'Golf Course Road',
+              area: profile?.address?.area || 'DLF Phase 5',
+              city: profile?.address?.city || 'Gurugram',
+              state: 'Haryana',
+              pincode: profile?.address?.pincode || '122002',
+              type: 'Home',
+            },
+          ];
+        } else {
+          updatedAddresses = updatedAddresses.map((a) => ({
+            ...a,
+            fullName: a.fullName === 'Priya Sharma' ? realName : a.fullName,
+            mobileNumber: a.fullName === 'Priya Sharma' && realPhone ? realPhone : a.mobileNumber,
+          }));
+        }
+
+        return {
+          id: user.id,
+          fullName: realName,
+          email: realEmail,
+          phone: realPhone || prev.phone,
+          walletBalance: typeof profile?.wallet_balance === 'number' ? profile.wallet_balance : prev.walletBalance,
+          rewardPoints: typeof profile?.reward_points === 'number' ? profile.reward_points : prev.rewardPoints,
+          referralCode: dynamicReferral,
+          totalOrders: prev.totalOrders,
+          totalSpent: prev.totalSpent,
+          addresses: updatedAddresses,
+        };
+      });
+
+      // Fetch user-specific orders from Supabase
       supabase
         .from('orders')
         .select('*')
+        .or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`)
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
-          if (data && !error && data.length > 0) {
-            setOrders((prev) => {
-              const cloudOrders: Order[] = data.map((d: any) => ({
-                id: d.id,
-                orderNumber: d.order_number,
-                customerId: d.user_id || 'cust-101',
-                customerName: d.customer_name || 'Savera Customer',
-                customerPhone: d.customer_phone || '+91 98765 43210',
-                items: d.items || [],
-                subtotal: Number(d.subtotal) || 0,
-                deliveryFee: Number(d.delivery_fee) || 0,
-                discount: Number(d.discount) || 0,
-                tax: 0,
-                totalAmount: Number(d.total_amount) || 0,
-                paymentMethod: (d.payment_method as any) || 'UPI',
-                paymentStatus: (d.payment_status as any) || 'Paid',
-                deliveryAddress: d.delivery_address || {},
-                deliveryDate: d.delivery_date || '',
-                deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
-                status: (d.status as any) || 'Order Placed',
-                driverName: d.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
-                driverPhone: d.driver_phone || '+91 98112 33445',
-                otp: d.otp || '4821',
-                createdAt: d.created_at || new Date().toISOString(),
-                updatedAt: d.created_at || new Date().toISOString(),
-              }));
-              const merged = [...cloudOrders];
-              for (const localOrd of prev) {
-                if (!cloudOrders.some((c) => c.id === localOrd.id || c.orderNumber === localOrd.orderNumber)) {
-                  merged.push(localOrd);
-                }
-              }
-              return merged;
-            });
+          if (data && !error) {
+            const userOrders: Order[] = data.map((d: any) => ({
+              id: d.id,
+              orderNumber: d.order_number,
+              customerId: d.user_id || user.id,
+              customerName: d.customer_name || realName,
+              customerPhone: d.customer_phone || realPhone,
+              items: d.items || [],
+              subtotal: Number(d.subtotal) || 0,
+              deliveryFee: Number(d.delivery_fee) || 0,
+              discount: Number(d.discount) || 0,
+              tax: 0,
+              totalAmount: Number(d.total_amount) || 0,
+              paymentMethod: (d.payment_method as any) || 'UPI',
+              paymentStatus: (d.payment_status as any) || 'Paid',
+              deliveryAddress: d.delivery_address || {},
+              deliveryDate: d.delivery_date || '',
+              deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
+              status: (d.status as any) || 'Order Placed',
+              driverName: d.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
+              driverPhone: d.driver_phone || '+91 98112 33445',
+              otp: d.otp || '4821',
+              createdAt: d.created_at || new Date().toISOString(),
+              updatedAt: d.created_at || new Date().toISOString(),
+            }));
+            setOrders(userOrders);
+            setCustomer((c) => ({
+              ...c,
+              totalOrders: userOrders.length,
+              totalSpent: userOrders.reduce((sum, o) => sum + (o.paymentStatus === 'Paid' ? o.totalAmount : 0), 0),
+            }));
           }
         });
 
+      // Fetch user-specific subscriptions from Supabase
       supabase
         .from('subscriptions')
         .select('*')
+        .or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`)
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
-          if (data && !error && data.length > 0) {
-            setSubscriptions((prev) => {
-              const cloudSubs: MilkSubscription[] = data.map((d: any) => ({
-                id: d.id,
-                customerId: d.user_id || 'cust-101',
-                customerName: d.customer_name || 'Savera Customer',
-                customerPhone: d.customer_phone || '+91 98765 43210',
-                productId: d.product_id,
-                productName: d.product_name,
-                variantId: d.variant_id || 'var-1L',
-                variantName: d.variant_name || '1 Litre Glass Bottle',
-                quantityPerDelivery: d.quantity || 1,
-                pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : 95,
-                frequency: (d.schedule_type as any) || 'Daily',
-                customDays: d.custom_days || [],
-                deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
-                deliveryAddress: d.delivery_address || {},
-                startDate: d.start_date || new Date().toISOString().split('T')[0],
-                status: (d.status as any) || 'Active',
-                skippedDates: [],
-                nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-                monthlyEstimate: Number(d.monthly_cost) || 2850,
-              }));
-              const merged = [...cloudSubs];
-              for (const localSub of prev) {
-                if (!cloudSubs.some((c) => c.id === localSub.id)) {
-                  merged.push(localSub);
-                }
-              }
-              return merged;
-            });
+          if (data && !error) {
+            const userSubs: MilkSubscription[] = data.map((d: any) => ({
+              id: d.id,
+              customerId: d.user_id || user.id,
+              customerName: d.customer_name || realName,
+              customerPhone: d.customer_phone || realPhone,
+              productId: d.product_id,
+              productName: d.product_name,
+              variantId: d.variant_id || 'var-1L',
+              variantName: d.variant_name || '1 Litre Glass Bottle',
+              quantityPerDelivery: d.quantity || 1,
+              pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : 95,
+              frequency: (d.schedule_type as any) || 'Daily',
+              customDays: d.custom_days || [],
+              deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
+              deliveryAddress: d.delivery_address || {},
+              startDate: d.start_date || new Date().toISOString().split('T')[0],
+              status: (d.status as any) || 'Active',
+              skippedDates: [],
+              nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+              monthlyEstimate: Number(d.monthly_cost) || 2850,
+            }));
+            setSubscriptions(userSubs);
           }
         });
-    } catch (e) {}
-  }, []);
+    } else {
+      setCustomer({
+        id: 'cust-guest',
+        fullName: 'Savera Guest',
+        phone: '+91 98765 43210',
+        email: 'guest@saverafarms.com',
+        walletBalance: 0,
+        rewardPoints: 50,
+        referralCode: 'SAV-WELCOME100',
+        totalOrders: 0,
+        totalSpent: 0,
+        addresses: [],
+      });
+      setOrders([]);
+      setSubscriptions([]);
+    }
+  }, [user, profile]);
 
   // Save to storage (only after hydration)
   useEffect(() => {
@@ -460,10 +521,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const rechargeWallet = (amount: number) => {
-    setCustomer((prev) => ({
-      ...prev,
-      walletBalance: prev.walletBalance + amount,
-    }));
+    setCustomer((prev) => {
+      const newBal = prev.walletBalance + amount;
+      try {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const uid = session?.user?.id;
+          if (uid) {
+            supabase.from('profiles').update({ wallet_balance: newBal }).eq('id', uid).then();
+          }
+        });
+      } catch (e) {}
+      return {
+        ...prev,
+        walletBalance: newBal,
+      };
+    });
     addToast('Wallet Recharged!', `₹${amount} added successfully to your Savera Wallet.`, 'success');
     logAuditAction('Wallet Recharge', customer.id, `Credited ₹${amount}`);
   };
@@ -471,6 +543,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateCustomerProfile = (data: Partial<CustomerProfile>) => {
     setCustomer((prev) => ({ ...prev, ...data }));
     addToast('Profile Updated', 'Customer profile details updated successfully.', 'success');
+    try {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const uid = session?.user?.id;
+        if (uid) {
+          const dbUpdates: any = { updated_at: new Date().toISOString() };
+          if (data.fullName) dbUpdates.full_name = data.fullName;
+          if (data.phone) dbUpdates.phone = data.phone;
+          supabase.from('profiles').update(dbUpdates).eq('id', uid).then();
+        }
+      });
+    } catch (e) {}
   };
 
   // Subscriptions
