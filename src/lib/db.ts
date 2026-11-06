@@ -56,8 +56,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=800&q=80',
+      '/images/rog-nasak-chai.png',
     ],
     variants: [
       { id: 'var-rnc-100g', name: '100g Pouch', price: 180, mrp: 210, discountPct: 14, stock: 150, sku: 'SAV-TEA-RNC-100G', weightVolume: '100 g' },
@@ -103,7 +102,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=800&q=80',
+      '/images/face-pack-powder.png',
     ],
     variants: [
       { id: 'var-fpp-100g', name: '100g Jar', price: 220, mrp: 260, discountPct: 15, stock: 110, sku: 'SAV-SKIN-FPP-100G', weightVolume: '100 g' },
@@ -151,7 +150,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80',
+      '/images/gud-chana.png',
     ],
     variants: [
       { id: 'var-gc-250g', name: '250g Kraft Pouch', price: 110, mrp: 130, discountPct: 15, stock: 200, sku: 'SAV-SNK-GC-250G', weightVolume: '250 g' },
@@ -199,7 +198,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=800&q=80',
+      '/images/chawanprash.png',
     ],
     variants: [
       { id: 'var-chw-500g', name: '500g Glass Jar', price: 440, mrp: 520, discountPct: 15, stock: 90, sku: 'SAV-WELL-CHW-500G', weightVolume: '500 g' },
@@ -245,7 +244,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&w=800&q=80',
+      '/images/bamboo-toothbrush.png',
     ],
     variants: [
       { id: 'var-bt-1pc', name: 'Single Brush', price: 85, mrp: 110, discountPct: 23, stock: 350, sku: 'SAV-CARE-BT-1PC', weightVolume: '1 Piece' },
@@ -291,7 +290,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1604085572504-a392ddf0d86a?auto=format&fit=crop&w=800&q=80',
+      '/images/gau-gobar-diya.png',
     ],
     variants: [
       { id: 'var-ggd-12pc', name: 'Box of 12 Diyas', price: 120, mrp: 150, discountPct: 20, stock: 240, sku: 'SAV-POOJ-GGD-12', weightVolume: 'Pack of 12' },
@@ -337,7 +336,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1608248597359-54359d9c6613?auto=format&fit=crop&w=800&q=80',
+      '/images/sea-buckthorn.png',
     ],
     variants: [
       { id: 'var-sbt-30ml', name: '30 ml Dropper Bottle', price: 590, mrp: 720, discountPct: 18, stock: 85, sku: 'SAV-WELL-SBT-30ML', weightVolume: '30 ml' },
@@ -383,7 +382,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80',
+      '/images/himalayan-shilajit.png',
     ],
     variants: [
       { id: 'var-shl-20g', name: '20g Glass Jar + Spatula', price: 950, mrp: 1250, discountPct: 24, stock: 95, sku: 'SAV-WELL-SHL-20G', weightVolume: '20 g' },
@@ -429,7 +428,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?auto=format&fit=crop&w=800&q=80',
+      '/images/kashmiri-kesar.png',
     ],
     variants: [
       { id: 'var-ksr-1g', name: '1 Gram Glass Vial', price: 349, mrp: 420, discountPct: 17, stock: 120, sku: 'SAV-SPICE-KSR-1G', weightVolume: '1 g' },
@@ -475,7 +474,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=800&q=80',
+      '/images/mouth-freshener.png',
     ],
     variants: [
       { id: 'var-mf-150g', name: '150g Glass Jar', price: 140, mrp: 170, discountPct: 18, stock: 160, sku: 'SAV-SNK-MF-150G', weightVolume: '150 g' },
@@ -521,7 +520,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?auto=format&fit=crop&w=800&q=80',
+      '/images/hard-ki-goliya.png',
     ],
     variants: [
       { id: 'var-hkg-150g', name: '150g Glass Jar', price: 130, mrp: 160, discountPct: 19, stock: 140, sku: 'SAV-SNK-HKG-150G', weightVolume: '150 g' },
@@ -568,7 +567,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?auto=format&fit=crop&w=800&q=80',
+      '/images/khand.png',
     ],
     variants: [
       { id: 'var-khd-1kg', name: '1 kg Eco Bag', price: 110, mrp: 135, discountPct: 19, stock: 260, sku: 'SAV-STP-KHD-1KG', weightVolume: '1 kg' },
@@ -615,7 +614,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1607006310488-828555e5b026?auto=format&fit=crop&w=800&q=80',
+      '/images/natural-soap.png',
     ],
     variants: [
       { id: 'var-ns-100g', name: 'Single Bar (100g)', price: 120, mrp: 150, discountPct: 20, stock: 190, sku: 'SAV-CARE-NS-100G', weightVolume: '100 g' },
@@ -661,7 +660,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80',
+      '/images/dantmanjan.png',
     ],
     variants: [
       { id: 'var-dm-80g', name: '80g Glass Bottle', price: 110, mrp: 140, discountPct: 21, stock: 150, sku: 'SAV-CARE-DM-80G', weightVolume: '80 g' },
@@ -707,7 +706,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
+      '/images/face-body-ubtan.png',
     ],
     variants: [
       { id: 'var-fbu-150g', name: '150g Tin Jar', price: 290, mrp: 350, discountPct: 17, stock: 120, sku: 'SAV-CARE-FBU-150G', weightVolume: '150 g' },
@@ -753,7 +752,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=800&q=80',
+      '/images/herbal-shampoo.png',
     ],
     variants: [
       { id: 'var-hs-200ml', name: '200 ml Pump Bottle', price: 299, mrp: 375, discountPct: 20, stock: 140, sku: 'SAV-HAIR-HS-200ML', weightVolume: '200 ml' },
@@ -799,7 +798,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80',
+      '/images/gulab-jal.png',
     ],
     variants: [
       { id: 'var-gj-100ml', name: '100 ml Fine Mist Spray', price: 160, mrp: 199, discountPct: 20, stock: 180, sku: 'SAV-SKIN-GJ-100ML', weightVolume: '100 ml' },
@@ -846,7 +845,7 @@ export const SEED_PRODUCTS: Product[] = [
       },
     ],
     images: [
-      'https://images.unsplash.com/photo-1526947425960-945c6e72858f?auto=format&fit=crop&w=800&q=80',
+      '/images/coconut-oil.png',
     ],
     variants: [
       { id: 'var-cno-500ml', name: '500 ml Glass Jar', price: 240, mrp: 290, discountPct: 17, stock: 140, sku: 'SAV-OIL-CNO-500ML', weightVolume: '500 ml' },
