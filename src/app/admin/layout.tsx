@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { AdminRole } from '@/types';
 import {
   LayoutDashboard,
@@ -23,11 +24,21 @@ import {
   FileText,
   LogOut,
   ChevronDown,
+  Lock,
+  Mail,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { adminRole, setAdminRole } = useApp();
+  const { user, profile, isAdmin, isLoading, signIn, signOut } = useAuth();
+
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Role-based permissions mapping
   const ROLE_PERMISSIONS: Record<AdminRole, string[]> = {
@@ -145,6 +156,122 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     'Inventory Manager',
     'Delivery Executive',
   ];
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError('');
+    setIsLoggingIn(true);
+    const { error, profile: loggedProfile } = await signIn(adminEmail, adminPassword);
+    if (error) {
+      setAdminError(error.message);
+    } else if (loggedProfile?.role !== 'admin') {
+      setAdminError('Access Denied: This account is registered as a Customer. Administrator privileges are required.');
+    }
+    setIsLoggingIn(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-300">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-savera-saffron border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-mono text-slate-400">Verifying Administrator Credentials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-savera-saffron/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="space-y-6 relative z-10">
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-savera-saffron/30 text-savera-saffron flex items-center justify-center mx-auto shadow-md">
+                <ShieldCheck className="w-7 h-7" />
+              </div>
+              <h1 className="font-serif text-2xl font-bold text-white">Savera Farms Admin Console</h1>
+              <p className="text-xs text-slate-400">
+                Authorized farm managers & staff only. Enter your administrator credentials to access operations.
+              </p>
+            </div>
+
+            {adminError && (
+              <div className="bg-red-950/80 border border-red-800/60 text-red-300 text-xs p-3 rounded-xl">
+                {adminError}
+              </div>
+            )}
+
+            {user && !isAdmin && (
+              <div className="bg-amber-950/60 border border-amber-800/40 text-amber-300 text-xs p-3 rounded-xl space-y-1">
+                <p className="font-bold">Signed in as: {user.email}</p>
+                <p className="text-[11px] text-amber-400">Your account role is "Customer". Please sign in with an Admin account.</p>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className="text-xs font-bold underline hover:text-white mt-1 block"
+                >
+                  Sign Out of Customer Account
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">Admin Email</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="admin@saverafarms.com"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-savera-saffron"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-savera-saffron"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+              >
+                <span>{isLoggingIn ? 'Authenticating...' : 'Unlock Admin Console'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            <div className="pt-2 text-center border-t border-slate-800">
+              <Link
+                href="/"
+                className="text-xs text-slate-400 hover:text-white transition font-medium"
+              >
+                ← Return to Public Storefront
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row">

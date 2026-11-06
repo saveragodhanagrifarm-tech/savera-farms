@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AppProvider } from '@/context/AppContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { QuickCartDrawer } from '@/components/shop/QuickCartDrawer';
 import { ToastContainer } from '@/components/common/ToastContainer';
+import { AuthModal } from '@/components/common/AuthModal';
 import './globals.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -26,17 +28,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased bg-savera-offwhite text-savera-dark selection:bg-savera-saffron selection:text-savera-brown">
-        <AppProvider>
-          {!isAdminOrDelivery && <Navbar onOpenCart={() => setIsCartOpen(true)} />}
+        <AuthProvider>
+          <AppProvider>
+            {!isAdminOrDelivery && <Navbar onOpenCart={() => setIsCartOpen(true)} />}
 
-          <main className="flex-1">{children}</main>
+            <main className="flex-1">{children}</main>
 
-          {!isAdminOrDelivery && <Footer />}
-          {!isAdminOrDelivery && <MobileBottomNav />}
+            {!isAdminOrDelivery && <Footer />}
+            {!isAdminOrDelivery && <MobileBottomNav />}
 
-          <QuickCartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-          <ToastContainer />
-        </AppProvider>
+            <QuickCartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+            <ToastContainer />
+            <AuthModal />
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );

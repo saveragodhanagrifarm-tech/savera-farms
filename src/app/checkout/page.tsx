@@ -24,6 +24,7 @@ import {
   FileText,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { openRazorpayCheckout } from '@/lib/razorpay';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function CheckoutPage() {
     deliveryFee,
     cartTotal,
     appliedCoupon,
+    addToast,
   } = useApp();
 
   const [selectedAddressId, setSelectedAddressId] = useState<string>(
@@ -112,6 +114,32 @@ export default function CheckoutPage() {
       pincode,
       type: addressType,
     };
+
+    if (paymentMethod !== 'Cash on Delivery') {
+      openRazorpayCheckout({
+        amountInRupees: cartTotal,
+        customerName: addressToUse.fullName,
+        customerEmail: customer.email,
+        customerPhone: addressToUse.mobileNumber,
+        orderNumber: `SAV-${Math.floor(1000 + Math.random() * 9000)}`,
+        onSuccess: (paymentId) => {
+          const newOrder = placeOrder(addressToUse, deliverySlot, paymentMethod);
+          addToast('Payment Successful!', `Razorpay Transaction ID: ${paymentId}`, 'success');
+          try {
+            confetti({
+              particleCount: 120,
+              spread: 80,
+              origin: { y: 0.6 },
+            });
+          } catch (e) {}
+          router.push(`/orders/${newOrder.id}`);
+        },
+        onFailure: (err) => {
+          addToast('Payment Incomplete', err.message || 'Payment was not completed', 'info');
+        },
+      });
+      return;
+    }
 
     const newOrder = placeOrder(addressToUse, deliverySlot, paymentMethod);
 

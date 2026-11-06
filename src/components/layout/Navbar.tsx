@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   MapPin,
   Search,
@@ -18,12 +19,16 @@ import {
   Menu,
   CheckCircle2,
   Package,
+  LogOut,
+  LogIn,
 } from 'lucide-react';
 
 export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => {
   const router = useRouter();
   const pathname = usePathname();
   const { cart, selectedPincode, setSelectedPincode, deliveryZones, products } = useApp();
+  const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showPincodeModal, setShowPincodeModal] = useState(false);
   const [pinInput, setPinInput] = useState(selectedPincode);
   const [searchQuery, setSearchQuery] = useState('');
@@ -225,21 +230,95 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
               <span>Milk Subscriptions</span>
             </Link>
 
-            <Link
-              href="/admin"
-              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-savera-saffron/30 hover:bg-savera-saffron text-savera-brown transition"
-            >
-              <ShieldCheck className="w-4 h-4 text-savera-brown" />
-              <span>Admin</span>
-            </Link>
+            {/* Auth / Account Profile Button */}
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full hover:bg-savera-cream border border-savera-dark/15 text-savera-dark transition text-xs font-bold"
+                >
+                  <div className="w-6 h-6 rounded-full bg-savera-green text-white flex items-center justify-center text-[11px] font-bold">
+                    {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="hidden sm:inline max-w-[90px] truncate">{profile?.full_name?.split(' ')[0] || 'User'}</span>
+                  {isAdmin && (
+                    <span className="hidden lg:inline bg-savera-saffron/40 text-savera-brown text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase">
+                      Admin
+                    </span>
+                  )}
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                </button>
 
-            <Link
-              href="/account"
-              className="p-2.5 rounded-full hover:bg-savera-cream text-savera-dark transition"
-              title="My Account & Orders"
-            >
-              <User className="w-5 h-5" />
-            </Link>
+                {userMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-floating border border-savera-dark/10 p-2 z-50 animate-in fade-in zoom-in-95"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <div className="px-3 py-2 border-b border-savera-dark/10">
+                      <p className="font-bold text-xs text-savera-dark truncate">{profile?.full_name || 'Savera Customer'}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                      <span className={`inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isAdmin ? 'bg-amber-100 text-amber-900 font-mono' : 'bg-emerald-100 text-emerald-900'}`}>
+                        {isAdmin ? '🛡️ Administrator' : '🌱 Verified Customer'}
+                      </span>
+                    </div>
+
+                    <div className="py-1 text-xs font-semibold">
+                      <Link
+                        href="/account"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-savera-cream text-savera-dark transition"
+                      >
+                        <User className="w-3.5 h-3.5 text-savera-green" />
+                        <span>My Account & Details</span>
+                      </Link>
+
+                      <Link
+                        href="/subscriptions"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-savera-cream text-savera-dark transition"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-savera-green" />
+                        <span>Milk Subscriptions</span>
+                      </Link>
+
+                      <Link
+                        href="/orders"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-savera-cream text-savera-dark transition"
+                      >
+                        <Package className="w-3.5 h-3.5 text-savera-green" />
+                        <span>Order Tracking</span>
+                      </Link>
+
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-savera-saffron/20 text-savera-brown font-bold transition border-t border-savera-dark/10 mt-1 pt-2"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-savera-saffron" />
+                          <span>Admin Portal</span>
+                        </Link>
+                      )}
+                    </div>
+
+                    <div className="pt-1 border-t border-savera-dark/10">
+                      <button
+                        onClick={() => signOut()}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-xs text-red-600 hover:bg-red-50 font-bold transition"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => openAuthModal('login')}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-savera-cream hover:bg-savera-saffron/30 text-savera-dark text-xs font-bold transition border border-savera-dark/15 shadow-sm"
+              >
+                <User className="w-3.5 h-3.5 text-savera-green" />
+                <span>Sign In</span>
+              </button>
+            )}
 
             {/* Shopping Bag Button */}
             <button
