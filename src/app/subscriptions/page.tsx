@@ -263,7 +263,7 @@ export default function SubscriptionsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {daysList.map((day) => {
                     const isSkipped = activeSub.skippedDates.includes(day.dateStr);
                     const isPaused = activeSub.status === 'Paused';
@@ -272,7 +272,7 @@ export default function SubscriptionsPage() {
                         key={day.dateStr}
                         onClick={() => skipSubscriptionDate(activeSub.id, day.dateStr)}
                         disabled={isPaused}
-                        className={`p-3 rounded-2xl text-center border transition flex flex-col items-center justify-between min-h-[78px] ${
+                        className={`p-1 sm:p-3 rounded-xl sm:rounded-2xl text-center border transition flex flex-col items-center justify-between min-h-[58px] sm:min-h-[78px] ${
                           isPaused
                             ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60'
                             : isSkipped
@@ -280,10 +280,10 @@ export default function SubscriptionsPage() {
                             : 'bg-savera-cream/70 border-savera-saffron/40 text-savera-dark hover:border-savera-green hover:shadow-sm'
                         }`}
                       >
-                        <span className="text-[10px] uppercase font-bold opacity-70">{day.dayName}</span>
-                        <span className="font-serif text-base font-bold my-0.5">{day.dayNum}</span>
+                        <span className="text-[9px] sm:text-[10px] uppercase font-bold opacity-70 leading-none">{day.dayName}</span>
+                        <span className="font-serif text-xs sm:text-base font-bold my-0.5">{day.dayNum}</span>
                         <span
-                          className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                          className={`text-[8px] sm:text-[9px] font-extrabold uppercase tracking-tight px-1 py-0.5 rounded ${
                             isPaused
                               ? 'bg-gray-200 text-gray-600'
                               : isSkipped
@@ -317,8 +317,8 @@ export default function SubscriptionsPage() {
 
       {/* Edit Subscription Modal */}
       {editingSubId && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-floating border border-savera-dark/10">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-serif text-lg font-bold text-savera-dark">Edit Subscription Preferences</h3>
               <button onClick={() => setEditingSubId(null)} className="text-gray-400 hover:text-gray-600">

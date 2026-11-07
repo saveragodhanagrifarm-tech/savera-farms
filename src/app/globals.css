@@ -9,11 +9,30 @@
   --font-playfair: 'Playfair Display', serif;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-jakarta);
   background-color: #faf9f6;
   color: #1b4332;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent iOS Safari automatic zoom on form input focus */
+@media screen and (max-width: 767px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Custom scrollbars */

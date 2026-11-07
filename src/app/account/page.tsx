@@ -364,8 +364,8 @@ export default function CustomerAccountPage() {
 
       {/* Wallet Recharge Modal */}
       {showRechargeModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-savera-green" />
@@ -425,8 +425,8 @@ export default function CustomerAccountPage() {
 
       {/* Add Address Modal */}
       {showAddressModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="font-serif text-lg font-bold text-savera-dark">Add New Delivery Address</h3>
               <button onClick={() => setShowAddressModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -513,8 +513,8 @@ export default function CustomerAccountPage() {
 
       {/* Edit Profile Modal */}
       {showEditProfileModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="font-serif text-lg font-bold text-savera-dark">Edit Profile Details</h3>
               <button onClick={() => setShowEditProfileModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -565,8 +565,8 @@ export default function CustomerAccountPage() {
 
       {/* Support Ticket Modal */}
       {showTicketModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="font-serif text-lg font-bold text-savera-dark">Raise Support Request</h3>
               <button onClick={() => setShowTicketModal(false)} className="text-gray-400 hover:text-gray-600">

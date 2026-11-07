@@ -144,51 +144,64 @@ export default function CartPage() {
             </div>
 
             {/* Cart Items Card */}
-            <div className="bg-white rounded-3xl p-6 border border-savera-dark/10 shadow-soft divide-y divide-savera-dark/10">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-savera-dark/10 shadow-soft divide-y divide-savera-dark/10">
               {cart.map((item) => (
-                <div key={item.variantId} className="py-4 first:pt-0 last:pb-0 flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden relative bg-savera-offwhite border border-savera-dark/10 shrink-0">
-                    <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                <div key={item.variantId} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden relative bg-savera-offwhite border border-savera-dark/10 shrink-0">
+                      <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-serif font-bold text-savera-dark text-sm sm:text-base truncate">
+                          {item.productName}
+                        </h4>
+                        <button
+                          onClick={() => removeFromCart(item.variantId)}
+                          className="sm:hidden text-gray-400 hover:text-red-500 p-1 shrink-0"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <span className="text-xs text-savera-green font-semibold block">{item.variantName}</span>
+                      <div className="text-xs font-bold text-savera-dark mt-0.5">₹{item.price} / unit</div>
+                    </div>
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-serif font-bold text-savera-dark text-sm sm:text-base truncate">
-                      {item.productName}
-                    </h4>
-                    <span className="text-xs text-savera-green font-semibold block">{item.variantName}</span>
-                    <div className="text-xs font-bold text-savera-dark mt-1">₹{item.price} / unit</div>
-                  </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-19 sm:pl-0">
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-2 bg-savera-offwhite border border-savera-dark/15 rounded-xl px-2.5 py-1">
+                      <button
+                        onClick={() => updateQuantity(item.variantId, -1)}
+                        className="p-0.5 text-savera-dark hover:text-red-500"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-xs font-bold text-savera-dark w-4 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.variantId, 1)}
+                        className="p-0.5 text-savera-dark hover:text-savera-green"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
 
-                  {/* Quantity Controls */}
-                  <div className="flex items-center gap-2 bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-1.5">
-                    <button
-                      onClick={() => updateQuantity(item.variantId, -1)}
-                      className="p-0.5 text-savera-dark hover:text-red-500"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="text-xs font-bold text-savera-dark w-4 text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.variantId, 1)}
-                      className="p-0.5 text-savera-dark hover:text-savera-green"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="font-serif text-base font-bold text-savera-dark block">
-                      ₹{item.price * item.quantity}
-                    </span>
-                    <button
-                      onClick={() => removeFromCart(item.variantId)}
-                      className="text-xs text-red-500 hover:underline inline-flex items-center gap-1 mt-1 font-semibold"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Remove</span>
-                    </button>
+                    <div className="text-right shrink-0">
+                      <span className="font-serif text-base font-bold text-savera-dark block">
+                        ₹{item.price * item.quantity}
+                      </span>
+                      <button
+                        onClick={() => removeFromCart(item.variantId)}
+                        className="hidden sm:inline-flex text-xs text-red-500 hover:underline items-center gap-1 mt-1 font-semibold"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -87,16 +87,16 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-savera-dark/10 shadow-soft">
       {/* Top Announcement Bar */}
-      <div className="bg-savera-dark text-savera-cream text-xs py-2 px-4 flex items-center justify-between text-center font-medium">
+      <div className="bg-savera-dark text-savera-cream text-xs py-2 px-3 sm:px-4 flex items-center justify-between text-center font-medium overflow-hidden">
         <div className="hidden md:flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-savera-saffron" />
           <span>SAVERA • ORGANIC . NATURAL . TRADITIONAL — Curated for Everyday Living</span>
         </div>
-        <div className="mx-auto md:mx-0 flex items-center gap-2">
-          <Truck className="w-3.5 h-3.5 text-savera-lightGreen" />
-          <span>Order before 8 PM for 5 AM Morning Delivery</span>
-          <span className="bg-savera-saffron text-savera-brown px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ml-1">
-            Free Delivery &gt; ₹{activeZone?.freeThreshold || 299}
+        <div className="mx-auto md:mx-0 flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+          <Truck className="w-3.5 h-3.5 text-savera-lightGreen shrink-0" />
+          <span className="truncate">Order before 8 PM for 5 AM Morning Delivery</span>
+          <span className="bg-savera-saffron text-savera-brown px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 ml-1">
+            Free &gt; ₹{activeZone?.freeThreshold || 299}
           </span>
         </div>
         <div className="hidden lg:flex items-center gap-4 text-[11px] opacity-90">
@@ -110,22 +110,32 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
       </div>
 
       {/* Main Navbar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           {/* Logo & Brand Identity */}
-          <Link href="/" className="flex items-center gap-3 group shrink-0">
-            <div className="w-12 h-12 rounded-2xl bg-savera-dark overflow-hidden flex items-center justify-center border-2 border-savera-saffron/40 shadow-md group-hover:scale-105 transition transform">
+          <div className="flex items-center gap-2 sm:gap-3 group shrink-0">
+            <Link href="/" className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-savera-dark overflow-hidden flex items-center justify-center border-2 border-savera-saffron/40 shadow-sm sm:shadow-md group-hover:scale-105 transition transform shrink-0">
               <img src="/logo.png" alt="Savera Farms Logo" className="w-full h-full object-cover" />
-            </div>
+            </Link>
             <div>
-              <span className="font-serif text-2xl font-bold text-savera-dark tracking-tight leading-none block">
+              <Link href="/" className="font-serif text-lg sm:text-2xl font-bold text-savera-dark tracking-tight leading-none block hover:text-savera-green transition">
                 SAVERA FARMS
-              </span>
-              <span className="text-[10px] text-savera-green font-medium tracking-wider uppercase block mt-0.5">
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowPincodeModal(true)}
+                className="flex sm:hidden items-center gap-1 text-[10px] text-savera-green font-bold tracking-tight mt-0.5"
+                title="Change delivery location"
+              >
+                <MapPin className="w-3 h-3 text-savera-green shrink-0" />
+                <span>{selectedPincode} ({activeZone ? activeZone.areaName.split(' ')[0] : 'Gurugram'})</span>
+                <ChevronDown className="w-2.5 h-2.5 text-savera-brown/60" />
+              </button>
+              <span className="hidden sm:block text-[10px] text-savera-green font-medium tracking-wider uppercase mt-0.5">
                 Purest Milk from Desi Breed
               </span>
             </div>
-          </Link>
+          </div>
 
           {/* Location Pincode Picker */}
           <button
@@ -420,35 +430,49 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
 
           {/* Mobile Category Quick Chips */}
           <div className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-savera-green px-1">Categories</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-savera-green px-1">Shop by Category</span>
             <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-savera-dark">
+              <Link
+                href="/shop?cat=Herbal%20%26%20Wellness"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2.5 rounded-xl bg-savera-cream/80 hover:bg-savera-cream flex items-center gap-2 border border-savera-saffron/30"
+              >
+                <span>🌿</span> <span className="truncate">Herbal & Wellness</span>
+              </Link>
+              <Link
+                href="/shop?cat=Personal%20Care"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2.5 rounded-xl bg-savera-cream/80 hover:bg-savera-cream flex items-center gap-2 border border-savera-saffron/30"
+              >
+                <span>✨</span> <span className="truncate">Personal Care</span>
+              </Link>
+              <Link
+                href="/shop?cat=Traditional%20Staples"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2.5 rounded-xl bg-savera-cream/80 hover:bg-savera-cream flex items-center gap-2 border border-savera-saffron/30"
+              >
+                <span>🌾</span> <span className="truncate">Traditional Staples</span>
+              </Link>
               <Link
                 href="/shop?cat=Milk"
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2.5 rounded-xl bg-savera-cream/80 hover:bg-savera-cream flex items-center gap-2 border border-savera-saffron/30"
               >
-                <span>🥛</span> <span>A2 Milk</span>
+                <span>🥛</span> <span className="truncate">A2 Desi Cow Milk</span>
               </Link>
               <Link
                 href="/shop?cat=Ghee"
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2.5 rounded-xl bg-savera-cream/80 hover:bg-savera-cream flex items-center gap-2 border border-savera-saffron/30"
               >
-                <span>🧈</span> <span>Vedic Ghee</span>
-              </Link>
-              <Link
-                href="/shop?cat=Dairy"
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-2.5 rounded-xl bg-savera-cream/80 hover:bg-savera-cream flex items-center gap-2 border border-savera-saffron/30"
-              >
-                <span>🧀</span> <span>Paneer & Curd</span>
+                <span>🧈</span> <span className="truncate">Vedic Bilona Ghee</span>
               </Link>
               <Link
                 href="/shop?cat=Oils"
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2.5 rounded-xl bg-savera-cream/80 hover:bg-savera-cream flex items-center gap-2 border border-savera-saffron/30"
               >
-                <span>🌿</span> <span>Cold Pressed Oils</span>
+                <span>🥥</span> <span className="truncate">Cold Pressed Oils</span>
               </Link>
             </div>
           </div>
@@ -466,14 +490,14 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
               onClick={() => setMobileMenuOpen(false)}
               className="p-3 rounded-xl bg-savera-offwhite hover:bg-savera-cream flex items-center gap-2"
             >
-              🥛 <span>Product Catalog</span>
+              🛍️ <span>Catalog</span>
             </Link>
             <Link
               href="/subscriptions"
               onClick={() => setMobileMenuOpen(false)}
               className="p-3 rounded-xl bg-savera-paleGreen/50 text-savera-dark flex items-center gap-2"
             >
-              📅 <span>Milk Subscriptions</span>
+              📅 <span>Milk Plan</span>
             </Link>
             <Link
               href="/orders"
@@ -487,21 +511,14 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
               onClick={() => setMobileMenuOpen(false)}
               className="p-3 rounded-xl bg-savera-offwhite text-savera-dark flex items-center gap-2"
             >
-              👤 <span>Customer Account</span>
+              👤 <span>Account</span>
             </Link>
             <Link
-              href="/admin"
+              href="/farm-story"
               onClick={() => setMobileMenuOpen(false)}
-              className="p-3 rounded-xl bg-savera-saffron/30 text-savera-brown flex items-center gap-2"
+              className="p-3 rounded-xl bg-savera-offwhite text-savera-dark flex items-center gap-2"
             >
-              🛡️ <span>Admin Portal</span>
-            </Link>
-            <Link
-              href="/delivery"
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-3 rounded-xl bg-emerald-100 text-emerald-900 flex items-center gap-2 col-span-2"
-            >
-              🚚 <span>Delivery Executive App</span>
+              📖 <span>Our Story</span>
             </Link>
           </div>
         </div>
@@ -509,8 +526,8 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
 
       {/* Pincode Change Modal */}
       {showPincodeModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-floating border border-savera-dark/10">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-savera-green" />

@@ -76,8 +76,8 @@ export function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-floating border border-savera-dark/10 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-8 shadow-floating border border-savera-dark/10 relative overflow-hidden max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Decorative corner accent */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-savera-saffron/20 rounded-full blur-2xl pointer-events-none" />
 

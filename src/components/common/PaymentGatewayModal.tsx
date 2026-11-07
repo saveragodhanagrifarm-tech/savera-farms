@@ -62,10 +62,10 @@ export const PaymentGatewayModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-savera-dark/15 overflow-hidden relative">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-savera-dark/15 overflow-hidden relative max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-savera-dark to-[#163023] text-savera-cream p-5 relative">
+        <div className="bg-gradient-to-r from-savera-dark to-[#163023] text-savera-cream p-5 relative shrink-0">
           <button
             onClick={handleCancel}
             className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition"
@@ -96,7 +96,7 @@ export const PaymentGatewayModal: React.FC<{
 
         {/* Success View */}
         {isSuccess ? (
-          <div className="p-8 text-center space-y-4">
+          <div className="p-8 text-center space-y-4 overflow-y-auto flex-1">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto animate-bounce">
               <CheckCircle2 className="w-10 h-10" />
             </div>
@@ -106,7 +106,7 @@ export const PaymentGatewayModal: React.FC<{
             </p>
           </div>
         ) : (
-          <div className="p-6 space-y-5">
+          <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
             {/* Payment Method Tabs */}
             <div className="grid grid-cols-3 gap-2 bg-savera-offwhite p-1 rounded-2xl border border-savera-dark/10 text-xs font-bold">
               <button

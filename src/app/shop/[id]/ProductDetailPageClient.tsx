@@ -226,53 +226,58 @@ export default function ProductDetailPage() {
 
           {/* Quantity Selector & Action Buttons */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center border border-savera-dark/20 rounded-xl bg-savera-offwhite px-3 py-2">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-1 text-savera-dark hover:text-savera-green"
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="w-8 text-center text-sm font-bold text-savera-dark">{quantity}</span>
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="p-1 text-savera-dark hover:text-savera-green"
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-4">
+              <div className="flex items-center justify-between sm:justify-start border border-savera-dark/20 rounded-xl bg-savera-offwhite px-3 py-2 shrink-0">
+                <span className="sm:hidden text-xs font-bold text-savera-dark/80">Quantity:</span>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="p-1 text-savera-dark hover:text-savera-green"
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-8 text-center text-sm font-bold text-savera-dark">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="p-1 text-savera-dark hover:text-savera-green"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                className={`flex-1 border py-3.5 px-6 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm ${
-                  justAdded
-                    ? 'bg-savera-green text-white border-savera-green'
-                    : 'bg-savera-cream hover:bg-savera-paleGreen border-savera-saffronDark/40 text-savera-dark'
-                }`}
-              >
-                {justAdded ? (
-                  <>
-                    <Check className="w-4 h-4 text-white" />
-                    <span>Added to Cart!</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="w-4 h-4 text-savera-dark" />
-                    <span>Add to Cart (₹{selectedVariant.price * quantity})</span>
-                  </>
-                )}
-              </button>
+              <div className="grid grid-cols-2 sm:flex sm:flex-1 gap-2">
+                <button
+                  onClick={handleAddToCart}
+                  className={`w-full border py-3.5 px-3 sm:px-6 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm ${
+                    justAdded
+                      ? 'bg-savera-green text-white border-savera-green'
+                      : 'bg-savera-cream hover:bg-savera-paleGreen border-savera-saffronDark/40 text-savera-dark'
+                  }`}
+                >
+                  {justAdded ? (
+                    <>
+                      <Check className="w-4 h-4 text-white" />
+                      <span>Added!</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="w-4 h-4 text-savera-dark" />
+                      <span className="truncate">Add to Cart</span>
+                    </>
+                  )}
+                </button>
 
-              <button
-                onClick={handleBuyNow}
-                className="bg-savera-dark hover:bg-savera-green text-white font-bold py-3.5 px-6 rounded-2xl text-xs sm:text-sm transition flex items-center gap-1.5 shadow-floating"
-              >
-                <span>Buy Now</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+                <button
+                  onClick={handleBuyNow}
+                  className="w-full bg-savera-dark hover:bg-savera-green text-white font-bold py-3.5 px-3 sm:px-6 rounded-2xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shadow-floating"
+                >
+                  <span>Buy Now</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {product.isSubscriptionEligible && (
@@ -281,10 +286,10 @@ export default function ProductDetailPage() {
                   setSubModalProduct(product);
                   setShowSubModal(true);
                 }}
-                className="w-full bg-savera-saffron hover:bg-savera-saffronDark text-savera-brown font-bold py-3.5 rounded-2xl text-xs sm:text-sm transition shadow-soft flex items-center justify-center gap-2"
+                className="w-full bg-savera-saffron hover:bg-savera-saffronDark text-savera-brown font-bold py-3.5 px-4 rounded-2xl text-xs sm:text-sm transition shadow-soft flex items-center justify-center gap-2 text-center"
               >
-                <Calendar className="w-4 h-4 text-savera-dark" />
-                <span>Subscribe & Save (Daily Morning Milk Delivery Before 7 AM)</span>
+                <Calendar className="w-4 h-4 text-savera-dark shrink-0" />
+                <span className="line-clamp-1">Subscribe & Save (Morning Delivery Before 7 AM)</span>
               </button>
             )}
           </div>
@@ -502,8 +507,8 @@ export default function ProductDetailPage() {
 
       {/* Review Submission Modal */}
       {showReviewModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-floating border border-savera-dark/10">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-serif text-lg font-bold text-savera-dark">Write a Review</h3>
               <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-gray-600">

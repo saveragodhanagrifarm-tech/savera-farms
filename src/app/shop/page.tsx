@@ -96,7 +96,7 @@ function ShopContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header Banner */}
-      <div className="bg-savera-dark text-savera-cream rounded-3xl p-8 sm:p-10 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-savera-dark text-savera-cream rounded-3xl p-6 sm:p-10 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <span className="text-xs font-bold text-savera-saffron uppercase tracking-widest block mb-1">
             Organic • Natural • Traditional
@@ -197,7 +197,7 @@ function ShopContent() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {filteredProducts.map((product) => (
             <ProductCard
               key={product.id}

@@ -59,8 +59,8 @@ export const QuickCartDrawer: React.FC<QuickCartDrawerProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white shadow-floating border-l border-savera-dark/10 flex flex-col">
+      <div className="absolute inset-y-0 right-0 max-w-full flex sm:pl-10">
+        <div className="w-screen max-w-full sm:max-w-md bg-white shadow-floating border-l border-savera-dark/10 flex flex-col">
           {/* Header */}
           <div className="p-5 border-b border-savera-dark/10 bg-savera-offwhite flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -177,7 +177,10 @@ export const QuickCartDrawer: React.FC<QuickCartDrawerProps> = ({ isOpen, onClos
 
           {/* Cart Footer */}
           {cart.length > 0 && (
-            <div className="p-5 border-t border-savera-dark/10 bg-savera-cream/30 space-y-4">
+            <div
+              className="p-4 sm:p-5 border-t border-savera-dark/10 bg-savera-cream/30 space-y-4"
+              style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+            >
               {/* Promo Coupon Section */}
               <div>
                 {appliedCoupon ? (

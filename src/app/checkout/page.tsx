@@ -229,7 +229,7 @@ export default function CheckoutPage() {
         {/* Checkout Steps */}
         <div className="lg:col-span-8 space-y-6">
           {/* Step 1: Delivery Address */}
-          <div className="bg-white rounded-3xl p-6 border border-savera-dark/10 shadow-soft space-y-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-savera-dark/10 shadow-soft space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-savera-green" />
@@ -380,7 +380,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Step 2: Delivery Slot & Special Instructions */}
-          <div className="bg-white rounded-3xl p-6 border border-savera-dark/10 shadow-soft space-y-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-savera-dark/10 shadow-soft space-y-4">
             <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
               <Clock className="w-5 h-5 text-savera-green" />
               <span>2. Choose Morning Delivery Slot</span>
@@ -425,7 +425,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Step 3: Payment Options & Interactive Forms */}
-          <div className="bg-white rounded-3xl p-6 border border-savera-dark/10 shadow-soft space-y-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-savera-dark/10 shadow-soft space-y-4">
             <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-savera-green" />
               <span>3. Payment Options</span>
@@ -565,7 +565,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Order Summary Column */}
-        <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-savera-dark/10 shadow-soft space-y-6 self-start">
+        <div className="lg:col-span-4 bg-white rounded-3xl p-4 sm:p-6 border border-savera-dark/10 shadow-soft space-y-5 sm:space-y-6 self-start">
           <div className="flex justify-between items-center pb-3 border-b border-savera-dark/10">
             <h3 className="font-serif text-lg font-bold text-savera-dark">
               Order Items ({cart.length})

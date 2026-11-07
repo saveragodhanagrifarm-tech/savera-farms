@@ -64,10 +64,10 @@ export default function HomePage() {
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-2">
                 <Link
                   href="/shop"
-                  className="bg-savera-dark hover:bg-savera-green text-savera-cream font-bold px-8 py-4 rounded-2xl text-sm transition shadow-floating flex items-center gap-2 group"
+                  className="bg-savera-dark hover:bg-savera-green text-savera-cream font-bold px-8 py-4 rounded-2xl text-sm transition shadow-floating flex items-center justify-center gap-2 group w-full sm:w-auto"
                 >
                   <span>Order Fresh Products</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
@@ -81,7 +81,7 @@ export default function HomePage() {
                         variantId: milkProduct.variants[0].id,
                       })
                     }
-                    className="bg-savera-saffron hover:bg-savera-saffronDark text-savera-brown font-bold px-8 py-4 rounded-2xl text-sm transition shadow-soft flex items-center gap-2"
+                    className="bg-savera-saffron hover:bg-savera-saffronDark text-savera-brown font-bold px-8 py-4 rounded-2xl text-sm transition shadow-soft flex items-center justify-center gap-2 w-full sm:w-auto"
                   >
                     <Calendar className="w-4 h-4 text-savera-dark" />
                     <span>Setup Milk Subscription</span>
@@ -162,71 +162,71 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           <Link
             href="/shop?cat=Herbal%20%26%20Wellness"
-            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+            className="group p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2"
           >
-            <div className="w-14 h-14 rounded-2xl bg-savera-green text-white flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Leaf className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-savera-green text-white flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Leaf className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <h3 className="font-serif text-base font-bold text-savera-dark">Herbal & Wellness</h3>
-            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Chai, Shilajit, Kesar & Rasayana</p>
+            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">Herbal & Wellness</h3>
+            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">Chai, Shilajit, Kesar & Rasayana</p>
           </Link>
 
           <Link
             href="/shop?cat=Personal%20Care"
-            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+            className="group p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2"
           >
-            <div className="w-14 h-14 rounded-2xl bg-emerald-700 text-emerald-100 flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Sparkles className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-700 text-emerald-100 flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <h3 className="font-serif text-base font-bold text-savera-dark">Personal Care</h3>
-            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Face Packs, Ubtan, Soaps & Gulab Jal</p>
+            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">Personal Care</h3>
+            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">Face Packs, Ubtan, Soaps & Gulab Jal</p>
           </Link>
 
           <Link
             href="/shop?cat=Traditional%20Staples"
-            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+            className="group p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2"
           >
-            <div className="w-14 h-14 rounded-2xl bg-amber-800 text-amber-200 flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Sun className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-800 text-amber-200 flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Sun className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <h3 className="font-serif text-base font-bold text-savera-dark">Traditional Staples</h3>
-            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Gud Chana, Desi Khand & Mukhwas</p>
+            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">Traditional Staples</h3>
+            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">Gud Chana, Desi Khand & Mukhwas</p>
           </Link>
 
           <Link
             href="/shop?cat=Milk"
-            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+            className="group p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2"
           >
-            <div className="w-14 h-14 rounded-2xl bg-savera-dark text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Milk className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-savera-dark text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Milk className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <h3 className="font-serif text-base font-bold text-savera-dark">A2 Desi Cow Milk</h3>
-            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Gir & Sahiwal fresh chilled milk</p>
+            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">A2 Desi Cow Milk</h3>
+            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">Gir & Sahiwal fresh chilled milk</p>
           </Link>
 
           <Link
             href="/shop?cat=Ghee"
-            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+            className="group p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2"
           >
-            <div className="w-14 h-14 rounded-2xl bg-savera-brown text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Flame className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-savera-brown text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Flame className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <h3 className="font-serif text-base font-bold text-savera-dark">Vedic Bilona Ghee</h3>
-            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Hand-churned from curd</p>
+            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">Vedic Bilona Ghee</h3>
+            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">Hand-churned from curd</p>
           </Link>
 
           <Link
             href="/shop?cat=Oils"
-            className="group p-5 rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2.5"
+            className="group p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-savera-cream/80 border border-savera-saffron/40 hover:bg-savera-cream hover:shadow-card transition duration-300 text-center space-y-2"
           >
-            <div className="w-14 h-14 rounded-2xl bg-amber-700 text-amber-200 flex items-center justify-center mx-auto group-hover:scale-110 transition">
-              <Droplets className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-700 text-amber-200 flex items-center justify-center mx-auto group-hover:scale-110 transition">
+              <Droplets className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <h3 className="font-serif text-base font-bold text-savera-dark">Cold Pressed Oils</h3>
-            <p className="text-[11px] text-savera-brown/80 line-clamp-2">Mustard & Virgin Coconut oils</p>
+            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">Cold Pressed Oils</h3>
+            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">Mustard & Virgin Coconut oils</p>
           </Link>
         </div>
       </section>
@@ -245,7 +245,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {bestSellers.map((product) => (
             <ProductCard
               key={product.id}
@@ -313,7 +313,7 @@ export default function HomePage() {
           <p className="text-xs text-savera-brown/80">Uncompromising purity and traditional care at every step.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           <div className="bg-white p-6 rounded-3xl border border-savera-dark/10 shadow-soft text-center space-y-3 relative">
             <span className="text-4xl font-serif font-bold text-savera-saffron/40 block">01</span>
             <h3 className="font-serif text-lg font-bold text-savera-dark">We Care for Our Cows</h3>
