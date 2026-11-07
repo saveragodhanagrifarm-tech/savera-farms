@@ -56,9 +56,9 @@ export default function CheckoutPage() {
   const [street, setStreet] = useState('');
   const [area, setArea] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [city, setCity] = useState('Gurugram');
+  const [city, setCity] = useState('Panchkula');
   const [state, setState] = useState('Haryana');
-  const [pincode, setPincode] = useState(selectedPincode);
+  const [pincode, setPincode] = useState(selectedPincode || '134109');
   const [addressType, setAddressType] = useState<'Home' | 'Work' | 'Other'>('Home');
 
   useEffect(() => {

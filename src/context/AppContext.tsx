@@ -146,7 +146,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>(SEED_COUPONS);
   const [customer, setCustomer] = useState<CustomerProfile>(SEED_CUSTOMER);
-  const [selectedPincode, setSelectedPincode] = useState<string>('122002');
+  const [selectedPincode, setSelectedPincode] = useState<string>('134109');
   const [subscriptions, setSubscriptions] = useState<MilkSubscription[]>(SEED_SUBSCRIPTIONS);
   const [orders, setOrders] = useState<Order[]>(SEED_ORDERS);
   const [batches, setBatches] = useState<BatchItem[]>(SEED_BATCHES);
@@ -187,7 +187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRawMaterials(getStoredData('savera_raw_v2', SEED_RAW_MATERIALS));
     setSuppliers(getStoredData('savera_suppliers_v2', SEED_SUPPLIERS));
     setPurchaseOrders(getStoredData('savera_purchase_orders_v2', SEED_PURCHASE_ORDERS));
-    setDeliveryZones(getStoredData('savera_zones_v2', SEED_DELIVERY_ZONES));
+    setDeliveryZones(getStoredData('savera_zones_v3', SEED_DELIVERY_ZONES));
     setCustomer(getStoredData('savera_customer_v2', SEED_CUSTOMER));
     setSupportTickets(getStoredData('savera_tickets_v2', SEED_TICKETS));
     setAuditLogs(getStoredData('savera_audit_v2', SEED_AUDIT_LOGS));
@@ -215,12 +215,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: 'addr-user-' + user.id.slice(0, 6),
               fullName: realName,
               mobileNumber: realPhone || '9876543210',
-              houseFlat: profile?.address?.houseFlat || 'Flat 4B',
-              street: profile?.address?.street || 'Golf Course Road',
-              area: profile?.address?.area || 'DLF Phase 5',
-              city: profile?.address?.city || 'Gurugram',
+              houseFlat: profile?.address?.houseFlat || 'House #142',
+              street: profile?.address?.street || 'Sector 9',
+              area: profile?.address?.area || 'Sector 9 Hub',
+              city: profile?.address?.city || 'Panchkula',
               state: 'Haryana',
-              pincode: profile?.address?.pincode || '122002',
+              pincode: profile?.address?.pincode || '134109',
               type: 'Home',
             },
           ];

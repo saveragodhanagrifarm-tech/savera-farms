@@ -401,7 +401,7 @@ export default function AdminDashboardPage() {
                       <div>
                         {ord.deliveryAddress
                           ? `${ord.deliveryAddress.houseFlat}, ${ord.deliveryAddress.street}, ${ord.deliveryAddress.area}`
-                          : 'DLF Phase 1, Gurugram'}
+                          : 'Sector 9, Panchkula'}
                       </div>
                       <div className="text-[11px] text-slate-400">Slot: {ord.deliverySlot}</div>
                     </td>
@@ -1055,7 +1055,7 @@ export default function AdminDashboardPage() {
               {deliveryZones.filter((z) => z.isServiceable).length}
             </h3>
             <span className="text-[11px] text-blue-400 font-semibold flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" /> Gurugram & South Delhi
+              <MapPin className="w-3.5 h-3.5" /> Chandigarh & Panchkula Tricity
             </span>
           </div>
 
@@ -1191,9 +1191,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Assigned Route</span>
-            <h3 className="font-serif text-xl font-bold text-savera-saffron">DLF Ph 1 – Ph 5, Gurugram</h3>
+            <h3 className="font-serif text-xl font-bold text-savera-saffron">Panchkula Sectors & MDC Hub</h3>
             <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" /> Hub: Sector 43 Cold Depot
+              <MapPin className="w-3.5 h-3.5" /> Hub: Sector 19 Cold Depot, Panchkula
             </span>
           </div>
         </div>
@@ -1221,7 +1221,7 @@ export default function AdminDashboardPage() {
                 {orders.map((ord) => {
                   const addrStr = ord.deliveryAddress
                     ? `${ord.deliveryAddress.houseFlat}, ${ord.deliveryAddress.street}, ${ord.deliveryAddress.area}`
-                    : 'Gurugram Hub Drop';
+                    : 'Panchkula Hub Drop';
                   return (
                     <tr key={ord.id} className="hover:bg-slate-900/50">
                       <td className="p-3 font-mono font-bold text-white">{ord.orderNumber}</td>

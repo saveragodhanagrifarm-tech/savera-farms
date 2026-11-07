@@ -186,22 +186,20 @@ export function AuthModal() {
                     <button
                       type="button"
                       onClick={() => setRole('customer')}
-                      className={`p-2.5 rounded-xl border font-bold text-center transition ${
-                        role === 'customer'
+                      className={`p-2.5 rounded-xl border font-bold text-center transition ${role === 'customer'
                           ? 'bg-savera-green text-white border-savera-green'
                           : 'bg-savera-offwhite text-savera-dark border-savera-dark/15'
-                      }`}
+                        }`}
                     >
                       Customer
                     </button>
                     <button
                       type="button"
                       onClick={() => setRole('admin')}
-                      className={`p-2.5 rounded-xl border font-bold text-center transition ${
-                        role === 'admin'
+                      className={`p-2.5 rounded-xl border font-bold text-center transition ${role === 'admin'
                           ? 'bg-savera-dark text-savera-saffron border-savera-dark'
                           : 'bg-savera-offwhite text-savera-dark border-savera-dark/15'
-                      }`}
+                        }`}
                     >
                       Admin / Staff
                     </button>

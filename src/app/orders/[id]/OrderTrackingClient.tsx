@@ -269,7 +269,7 @@ export default function OrderTrackingPage() {
             <div>
               <h4 className="font-bold text-xs text-savera-dark">{order.driverName || 'Ramesh Kumar (Savera Delivery Partner)'}</h4>
               <span className="text-[11px] text-savera-brown font-semibold block mt-0.5">
-                Gurugram Morning Cold-Chain Route
+                Panchkula & Chandigarh Morning Cold-Chain Route
               </span>
             </div>
             <a

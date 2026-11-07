@@ -51,9 +51,9 @@ export default function CustomerAccountPage() {
   const [newHouse, setNewHouse] = useState('');
   const [newStreet, setNewStreet] = useState('');
   const [newArea, setNewArea] = useState('');
-  const [newCity, setNewCity] = useState('Gurugram');
+  const [newCity, setNewCity] = useState('Panchkula');
   const [newState, setNewState] = useState('Haryana');
-  const [newPincode, setNewPincode] = useState('122002');
+  const [newPincode, setNewPincode] = useState('134109');
   const [newType, setNewType] = useState<'Home' | 'Work' | 'Other'>('Home');
 
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);

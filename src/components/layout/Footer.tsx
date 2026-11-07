@@ -150,12 +150,12 @@ export const Footer: React.FC = () => {
             <div className="space-y-2 text-xs text-savera-cream/80">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-savera-saffron shrink-0 mt-0.5" />
-                <span>Savera Organic Dairy Estate, Sector 65 Belt, Gurugram, Haryana - 122018</span>
+                <span>Savera Godhan Agri Farm, SCO 84-85, Sector 9, Panchkula, Haryana - 134109</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-savera-saffron shrink-0" />
                 <a href="tel:+919876543210" className="hover:text-white transition">
-                  +91 98765 43210 / +91 124 4567890
+                  +91 98765 43210 / +91 172 4567890
                 </a>
               </div>
               <div className="flex items-center gap-2">

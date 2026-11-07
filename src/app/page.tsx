@@ -421,7 +421,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-serif font-bold text-savera-dark text-base">Kavita Rastogi</h4>
-                <span className="text-[10px] text-savera-green font-semibold">Gurugram • Daily Subscriber (1L)</span>
+                <span className="text-[10px] text-savera-green font-semibold">Panchkula (Sec 14) • Daily Subscriber (1L)</span>
               </div>
               <span className="bg-savera-paleGreen text-savera-green text-[10px] font-bold px-2.5 py-1 rounded-full">
                 Verified Purchase
@@ -436,7 +436,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-serif font-bold text-savera-dark text-base">Amitabh Sen</h4>
-                <span className="text-[10px] text-savera-green font-semibold">Delhi • Ghee Customer</span>
+                <span className="text-[10px] text-savera-green font-semibold">Chandigarh (Sec 18) • Ghee Customer</span>
               </div>
               <span className="bg-savera-paleGreen text-savera-green text-[10px] font-bold px-2.5 py-1 rounded-full">
                 Verified Purchase

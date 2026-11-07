@@ -18,6 +18,11 @@ export default function FAQPage() {
       a: 'Milk is delivered every morning between 5:00 AM and 7:00 AM in insulated cold-chain glass bottles directly to your doorstep.'
     },
     {
+      category: 'Serviceable Areas',
+      q: 'Which areas do you deliver to in Chandigarh & Panchkula?',
+      a: 'We deliver fresh every morning across all sectors of Chandigarh, Panchkula (including MDC, Sector 20, Sector 14, Pinjore-Kalka belt), and Mohali Tricity. You can check your 6-digit pincode using the location selector in the top bar.'
+    },
+    {
       category: 'Subscription Controls',
       q: 'Can I pause my milk subscription when I travel?',
       a: 'Yes! You can pause your subscription or skip specific dates in 1-click through your Customer Subscriptions Dashboard.'

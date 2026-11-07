@@ -43,14 +43,22 @@ export default function ContactPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Contact Info Cards */}
         <div className="lg:col-span-5 bg-savera-dark text-savera-cream rounded-3xl p-8 shadow-floating space-y-6">
-          <h3 className="font-serif text-2xl font-bold text-white">Farm & Operations Office</h3>
+          <h3 className="font-serif text-2xl font-bold text-white">Head Office & Operations</h3>
 
           <div className="space-y-4 text-xs text-savera-cream/80">
             <div className="flex items-start gap-3">
               <MapPin className="w-5 h-5 text-savera-saffron shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-white block">Estate Address:</span>
-                Savera Organic Dairy Estate, Sector 65 Belt, Gurugram, Haryana - 122018
+                <span className="font-bold text-white block">Panchkula Head Office:</span>
+                Savera Godhan Agri Farm, SCO 84-85, Sector 9, Panchkula, Haryana - 134109
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-savera-saffron shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-white block">Dairy Farm Estate:</span>
+                Savera Organic Dairy Estate, Morni Foothills Belt, Panchkula, Haryana - 134109
               </div>
             </div>
 
@@ -59,7 +67,7 @@ export default function ContactPage() {
               <div>
                 <span className="font-bold text-white block">Customer Support Phone:</span>
                 <a href="tel:+919876543210" className="hover:text-savera-saffron transition">
-                  +91 98765 43210 / +91 124 4567890
+                  +91 98765 43210 / +91 172 4567890
                 </a>
               </div>
             </div>

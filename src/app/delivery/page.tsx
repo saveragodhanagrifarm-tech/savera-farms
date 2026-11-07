@@ -76,7 +76,7 @@ export default function DeliveryExecutivePage() {
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center text-xs">
         <div>
           <span className="text-slate-400 block">Agent: Ramesh Kumar</span>
-          <span className="font-bold text-white">Route: Gurugram Sector 54 & Cyber City</span>
+          <span className="font-bold text-white">Route: Panchkula Sector 9, MDC & Chandigarh Sector 18</span>
         </div>
         <div className="text-right">
           <span className="bg-emerald-950 text-emerald-400 font-bold px-2.5 py-1 rounded-full text-[10px] block mb-1">
@@ -143,7 +143,7 @@ export default function DeliveryExecutivePage() {
                   <p className="leading-relaxed">
                     {ord.deliveryAddress
                       ? `${ord.deliveryAddress.houseFlat}, ${ord.deliveryAddress.street}, ${ord.deliveryAddress.area}, ${ord.deliveryAddress.city} - ${ord.deliveryAddress.pincode}`
-                      : 'Gurugram Central'}
+                      : 'Panchkula Central'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400 text-[11px] pt-1 border-t border-slate-800/80">
@@ -177,7 +177,7 @@ export default function DeliveryExecutivePage() {
                   href={`https://maps.google.com/?q=${encodeURIComponent(
                     ord.deliveryAddress
                       ? `${ord.deliveryAddress.houseFlat} ${ord.deliveryAddress.street} ${ord.deliveryAddress.city}`
-                      : 'Gurugram'
+                      : 'Panchkula'
                   )}`}
                   target="_blank"
                   rel="noreferrer"

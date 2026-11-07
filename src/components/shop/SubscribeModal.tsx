@@ -50,12 +50,12 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       id: 'addr-default',
       fullName: customer.fullName,
       mobileNumber: customer.phone,
-      houseFlat: 'House #12',
-      street: 'Main Road',
-      area: 'Local Colony',
-      city: 'Gurugram',
+      houseFlat: 'House #142',
+      street: 'Sector 9 Hub',
+      area: 'Sector 9',
+      city: 'Panchkula',
       state: 'Haryana',
-      pincode: selectedPincode,
+      pincode: selectedPincode || '134109',
       type: 'Home',
     };
 

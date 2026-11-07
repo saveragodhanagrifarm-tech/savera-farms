@@ -128,7 +128,7 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
                 title="Change delivery location"
               >
                 <MapPin className="w-3 h-3 text-savera-green shrink-0" />
-                <span>{selectedPincode} ({activeZone ? activeZone.areaName.split(' ')[0] : 'Gurugram'})</span>
+                <span>{selectedPincode} ({activeZone ? activeZone.areaName.split(' ')[0] : 'Panchkula'})</span>
                 <ChevronDown className="w-2.5 h-2.5 text-savera-brown/60" />
               </button>
               <span className="hidden sm:block text-[10px] text-savera-green font-medium tracking-wider uppercase mt-0.5">
@@ -541,7 +541,7 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
               </button>
             </div>
             <p className="text-xs text-savera-brown/80 mb-4">
-              Enter your pincode or select one of our active morning milk delivery hubs in Gurugram & Delhi NCR:
+              Enter your 6-digit pincode or select one of our active morning milk delivery hubs in Chandigarh, Panchkula & Tricity:
             </p>
             <form onSubmit={handlePincodeSubmit} className="space-y-4">
               <div className="flex gap-2">

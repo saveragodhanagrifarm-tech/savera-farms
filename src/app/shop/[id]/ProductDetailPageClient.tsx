@@ -552,7 +552,7 @@ export default function ProductDetailPage() {
                 <label className="text-xs font-bold text-savera-dark block mb-1">Review Headline</label>
                 <input
                   type="text"
-                  placeholder="e.g. Best fresh A2 milk in Gurugram!"
+                  placeholder="e.g. Best fresh A2 milk in Chandigarh & Panchkula!"
                   value={reviewTitle}
                   onChange={(e) => setReviewTitle(e.target.value)}
                   className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
