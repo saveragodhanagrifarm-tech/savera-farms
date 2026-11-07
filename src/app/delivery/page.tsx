@@ -94,11 +94,10 @@ export default function DeliveryExecutivePage() {
           <button
             key={tab}
             onClick={() => setFilterTab(tab)}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition border ${
-              filterTab === tab
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition border ${filterTab === tab
                 ? 'bg-savera-saffron text-slate-950 border-savera-saffron font-extrabold shadow-sm'
                 : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-            }`}
+              }`}
           >
             {tab}
           </button>
@@ -124,13 +123,12 @@ export default function DeliveryExecutivePage() {
                   </h4>
                 </div>
                 <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                    ord.status === 'Delivered'
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${ord.status === 'Delivered'
                       ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                       : ord.status === 'Cancelled'
-                      ? 'bg-red-950 text-red-400'
-                      : 'bg-savera-dark text-savera-saffron'
-                  }`}
+                        ? 'bg-red-950 text-red-400'
+                        : 'bg-savera-dark text-savera-saffron'
+                    }`}
                 >
                   {ord.status}
                 </span>

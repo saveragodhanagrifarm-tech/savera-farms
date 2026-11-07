@@ -121,7 +121,7 @@ export default function CheckoutPage() {
       mobileNumber,
       houseFlat: houseFlat || 'House 14',
       street: street || 'Main Boulevard',
-      area: area || 'Sector 54',
+      area: area || 'Sector 9',
       city,
       state,
       pincode,
