@@ -78,6 +78,7 @@ interface AppContextType {
   setDefaultAddress: (id: string) => void;
   resetToFreshBaseline: () => void;
   rechargeWallet: (amount: number, referenceId?: string, description?: string) => void;
+  debitWallet: (amount: number, referenceId?: string, description?: string) => boolean;
   walletTransactions: WalletTransaction[];
   isAfterCutoff: boolean;
   earliestDeliveryDate: string;
@@ -598,6 +599,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     addToast('Wallet Recharged! 💳', `₹${amount} added successfully to your Savera Wallet.`, 'success');
     logAuditAction('Wallet Recharge', customer.id, `Credited ₹${amount} (Ref: ${ref})`);
+  };
+
+  const debitWallet = (amount: number, referenceId?: string, description?: string): boolean => {
+    if (customer.walletBalance < amount) {
+      addToast('Insufficient Wallet Balance', `Your wallet balance (₹${customer.walletBalance}) is lower than ₹${amount}.`, 'error');
+      return false;
+    }
+    const ref = referenceId || `DEB-${Math.floor(10000 + Math.random() * 90000)}`;
+    const desc = description || 'Wallet Debit';
+
+    setCustomer((prev) => {
+      const newBal = Math.max(0, prev.walletBalance - amount);
+      const tx: WalletTransaction = {
+        id: 'tx-' + Date.now(),
+        customerId: user?.id || prev.id,
+        type: 'Debit',
+        amount,
+        balanceAfter: newBal,
+        description: desc,
+        referenceId: ref,
+        createdAt: new Date().toISOString(),
+      };
+      setWalletTransactions((txPrev) => {
+        const updatedTx = [tx, ...txPrev];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('savera_wallet_tx_v3', JSON.stringify(updatedTx));
+        }
+        return updatedTx;
+      });
+
+      if (typeof window !== 'undefined' && user?.id) {
+        localStorage.setItem(`savera_user_wallet_${user.id}`, JSON.stringify(newBal));
+      }
+
+      try {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const uid = session?.user?.id;
+          if (uid) {
+            supabase.from('profiles').update({ wallet_balance: newBal }).eq('id', uid).then();
+          }
+        });
+      } catch (e) {}
+
+      return {
+        ...prev,
+        walletBalance: newBal,
+      };
+    });
+    logAuditAction('Wallet Debit', customer.id, `Debited ₹${amount} (Ref: ${ref})`);
+    return true;
   };
 
   const updateCustomerProfile = (data: Partial<CustomerProfile>) => {
@@ -1151,6 +1202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setDefaultAddress,
         resetToFreshBaseline,
         rechargeWallet,
+        debitWallet,
         walletTransactions,
         isAfterCutoff,
         earliestDeliveryDate,

@@ -1,9 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Product, SubscriptionFrequency, DeliverySlot } from '@/types';
+import { useRouter } from 'next/navigation';
+import { Product, SubscriptionFrequency, DeliverySlot, Address } from '@/types';
 import { useApp } from '@/context/AppContext';
-import { X, Calendar, Clock, MapPin, Sparkles, CheckCircle, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { openRazorpayCheckout } from '@/lib/razorpay';
+import confetti from 'canvas-confetti';
+import {
+  X,
+  Calendar,
+  Clock,
+  MapPin,
+  Sparkles,
+  CheckCircle,
+  ShieldCheck,
+  CreditCard,
+  Wallet,
+  Lock,
+  ArrowRight,
+  User,
+  Plus,
+} from 'lucide-react';
 
 interface SubscribeModalProps {
   product: Product;
@@ -16,7 +34,17 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   initialVariantId,
   onClose,
 }) => {
-  const { addSubscription, customer, selectedPincode, deliveryZones } = useApp();
+  const router = useRouter();
+  const { user, profile, openAuthModal } = useAuth();
+  const {
+    addSubscription,
+    customer,
+    selectedPincode,
+    rechargeWallet,
+    debitWallet,
+    addAddress,
+    addToast,
+  } = useApp();
 
   const [selectedVariantId, setSelectedVariantId] = useState(
     initialVariantId || product.variants[0]?.id || ''
@@ -25,6 +53,23 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [frequency, setFrequency] = useState<SubscriptionFrequency>('Daily');
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>('5:00 AM - 7:00 AM');
   const [customDays, setCustomDays] = useState<string[]>(['Mon', 'Wed', 'Fri']);
+
+  // Advance Plan Billing Cycle (Deposit required to activate daily doorstep drops)
+  const [advancePlan, setAdvancePlan] = useState<'7days' | '15days' | '30days'>('7days');
+
+  // Address Selection
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(
+    customer.addresses.find((a) => a.isDefault)?.id || customer.addresses[0]?.id || ''
+  );
+  const [showNewAddressFields, setShowNewAddressFields] = useState(customer.addresses.length === 0);
+  const [newHouse, setNewHouse] = useState('');
+  const [newStreet, setNewStreet] = useState('');
+  const [newArea, setNewArea] = useState('');
+  const [newPincode, setNewPincode] = useState(selectedPincode || '134109');
+
+  // Payment Selection
+  const [paymentOption, setPaymentOption] = useState<'wallet' | 'online'>('online');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const selectedVariant = product.variants.find((v) => v.id === selectedVariantId) || product.variants[0];
 
@@ -38,31 +83,82 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const pricePerUnit = selectedVariant.price;
   const monthlyEstimate = monthlyDeliveries * pricePerUnit * quantity;
 
+  // Advance deposit calculation
+  const planDays = advancePlan === '7days' ? 7 : advancePlan === '15days' ? 15 : 30;
+  const advanceAmount = Math.round((monthlyEstimate / 30) * planDays);
+
+  const walletHasEnough = customer.walletBalance >= advanceAmount;
+
   const toggleCustomDay = (day: string) => {
     setCustomDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
   };
 
-  const handleConfirmSubscription = (e: React.FormEvent) => {
+  const handleConfirmAndPay = async (e: React.FormEvent) => {
     e.preventDefault();
-    const address = customer.addresses[0] || {
-      id: 'addr-default',
-      fullName: customer.fullName,
-      mobileNumber: customer.phone,
-      houseFlat: 'House #142',
-      street: 'Sector 9 Hub',
-      area: 'Sector 9',
-      city: 'Panchkula',
-      state: 'Haryana',
-      pincode: selectedPincode || '134109',
-      type: 'Home',
-    };
 
-    addSubscription({
-      customerId: customer.id,
-      customerName: customer.fullName,
-      customerPhone: customer.phone,
+    if (!user) {
+      addToast('Sign-In Required', 'Please sign in to securely link your milk deliveries to your account.', 'info');
+      openAuthModal('login');
+      return;
+    }
+
+    // Resolve Delivery Address
+    let addressToUse: Address | undefined = customer.addresses.find((a) => a.id === selectedAddressId);
+    if (!addressToUse && showNewAddressFields) {
+      if (!newHouse.trim() || !newStreet.trim()) {
+        addToast('Address Required', 'Please enter your house and street details for morning delivery.', 'error');
+        return;
+      }
+      const newId = addAddress({
+        fullName: profile?.full_name || customer.fullName,
+        mobileNumber: profile?.phone || customer.phone,
+        houseFlat: newHouse.trim(),
+        street: newStreet.trim(),
+        area: newArea.trim() || newStreet.trim(),
+        city: 'Panchkula',
+        state: 'Haryana',
+        pincode: newPincode.trim(),
+        type: 'Home',
+        isDefault: true,
+      });
+      addressToUse = {
+        id: newId,
+        fullName: profile?.full_name || customer.fullName,
+        mobileNumber: profile?.phone || customer.phone,
+        houseFlat: newHouse.trim(),
+        street: newStreet.trim(),
+        area: newArea.trim() || newStreet.trim(),
+        city: 'Panchkula',
+        state: 'Haryana',
+        pincode: newPincode.trim(),
+        type: 'Home',
+        isDefault: true,
+      };
+    }
+
+    if (!addressToUse) {
+      addressToUse = {
+        id: 'addr-default',
+        fullName: profile?.full_name || customer.fullName,
+        mobileNumber: profile?.phone || customer.phone,
+        houseFlat: 'Main Doorstep',
+        street: 'Sector 9 Hub',
+        area: 'Sector 9',
+        city: 'Panchkula',
+        state: 'Haryana',
+        pincode: selectedPincode || '134109',
+        type: 'Home',
+      };
+    }
+
+    setIsProcessing(true);
+
+    const subscriptionPayload = {
+      customerId: user.id || customer.id,
+      customerName: profile?.full_name || customer.fullName,
+      customerPhone: profile?.phone || customer.phone,
       productId: product.id,
       productName: product.name,
       variantId: selectedVariant.id,
@@ -72,11 +168,80 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       frequency,
       customDays: frequency === 'Custom' ? customDays : undefined,
       deliverySlot,
-      deliveryAddress: address,
+      deliveryAddress: addressToUse,
       monthlyEstimate,
-    });
+    };
 
-    onClose();
+    // CASE 1: Pay using Savera Wallet Balance
+    if (paymentOption === 'wallet') {
+      if (!walletHasEnough) {
+        addToast('Low Wallet Balance', `Please choose Online Payment or recharge your wallet by ₹${advanceAmount - customer.walletBalance}.`, 'error');
+        setIsProcessing(false);
+        return;
+      }
+
+      const success = debitWallet(
+        advanceAmount,
+        `SUB-ACT-${Date.now().toString().slice(-6)}`,
+        `Advance ${planDays}-day deposit for ${product.name} daily subscription`
+      );
+
+      if (success) {
+        addSubscription(subscriptionPayload);
+        try {
+          confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+        } catch (err) {}
+        addToast(
+          'Subscription Activated! 🥛',
+          `₹${advanceAmount} debited from wallet. Deliveries start tomorrow 5:00 AM.`,
+          'success'
+        );
+        setIsProcessing(false);
+        onClose();
+        router.push('/subscriptions');
+      } else {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
+    // CASE 2: Online Payment via Razorpay / Savera Pay Gateway
+    await openRazorpayCheckout({
+      amountInRupees: advanceAmount,
+      customerName: profile?.full_name || customer.fullName,
+      customerEmail: user.email || customer.email,
+      customerPhone: profile?.phone || customer.phone,
+      orderNumber: `SUB-DEP-${Math.floor(10000 + Math.random() * 90000)}`,
+      onSuccess: (paymentId) => {
+        // 1. Credit wallet with the paid advance
+        rechargeWallet(
+          advanceAmount,
+          paymentId,
+          `Paid ${planDays}-day advance deposit for ${product.name} subscription`
+        );
+        // 2. Activate subscription
+        addSubscription(subscriptionPayload);
+        try {
+          confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+        } catch (err) {}
+        addToast(
+          'Subscription Activated! 🥛',
+          `Payment of ₹${advanceAmount} verified (Ref: ${paymentId}). Daily deliveries start tomorrow!`,
+          'success'
+        );
+        setIsProcessing(false);
+        onClose();
+        router.push('/subscriptions');
+      },
+      onFailure: (err) => {
+        setIsProcessing(false);
+        addToast(
+          'Subscription Not Activated',
+          err.message || 'Payment was cancelled or unsuccessful. No subscription was created.',
+          'info'
+        );
+      },
+    });
   };
 
   return (
@@ -91,7 +256,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-2xl bg-savera-dark text-savera-saffron flex items-center justify-center">
+          <div className="w-10 h-10 rounded-2xl bg-savera-dark text-savera-saffron flex items-center justify-center shadow-sm">
             <Calendar className="w-5 h-5" />
           </div>
           <div>
@@ -100,9 +265,26 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           </div>
         </div>
 
+        {/* Auth prompt if unauthenticated */}
+        {!user && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <span className="font-bold text-amber-900 block">Sign-in recommended</span>
+              <p className="text-[11px] text-amber-700">Link daily deliveries directly to your customer account.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openAuthModal('login')}
+              className="bg-savera-dark text-savera-cream font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-savera-green transition shrink-0"
+            >
+              Sign In
+            </button>
+          </div>
+        )}
+
         {/* Product Details Banner */}
-        <div className="bg-savera-cream/70 rounded-2xl p-4 mb-5 border border-savera-saffron/30 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl overflow-hidden relative shrink-0 bg-white">
+        <div className="bg-savera-cream/70 rounded-2xl p-3.5 mb-4 border border-savera-saffron/30 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl overflow-hidden relative shrink-0 bg-white">
             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
           </div>
           <div>
@@ -115,7 +297,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleConfirmSubscription} className="space-y-4">
+        <form onSubmit={handleConfirmAndPay} className="space-y-4">
           {/* Variant Choice */}
           <div>
             <label className="text-xs font-bold text-savera-dark block mb-1">Select Bottle Size:</label>
@@ -141,13 +323,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           {/* Quantity Selector */}
           <div>
             <label className="text-xs font-bold text-savera-dark block mb-1">Quantity per Delivery:</label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {[1, 2, 3, 4].map((qty) => (
                 <button
                   type="button"
                   key={qty}
                   onClick={() => setQuantity(qty)}
-                  className={`w-12 h-10 rounded-xl border text-xs font-bold transition flex items-center justify-center ${
+                  className={`flex-1 h-9 rounded-xl border text-xs font-bold transition flex items-center justify-center ${
                     quantity === qty
                       ? 'bg-savera-green text-white border-savera-green shadow-sm'
                       : 'bg-savera-offwhite text-savera-dark border-savera-dark/10'
@@ -168,7 +350,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                   type="button"
                   key={f}
                   onClick={() => setFrequency(f)}
-                  className={`p-2.5 rounded-xl border text-xs font-bold text-left transition flex items-center justify-between ${
+                  className={`p-2 rounded-xl border text-xs font-bold text-left transition flex items-center justify-between ${
                     frequency === f
                       ? 'bg-savera-dark text-savera-saffron border-savera-dark shadow-sm'
                       : 'bg-savera-offwhite text-savera-dark border-savera-dark/10'
@@ -193,7 +375,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                       type="button"
                       key={day}
                       onClick={() => toggleCustomDay(day)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
                         active ? 'bg-savera-green text-white' : 'bg-gray-100 text-gray-600'
                       }`}
                     >
@@ -205,7 +387,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </div>
           )}
 
-          {/* Delivery Time Slot */}
+          {/* Delivery Slot */}
           <div>
             <label className="text-xs font-bold text-savera-dark block mb-1 flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-savera-green" />
@@ -222,15 +404,195 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             </select>
           </div>
 
-          {/* Monthly Estimate Summary */}
-          <div className="bg-savera-paleGreen/60 p-3.5 rounded-2xl border border-savera-green/30 flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-savera-dark uppercase tracking-wider block">Estimated Monthly Billing</span>
-              <span className="text-[10px] text-savera-brown font-medium">~{monthlyDeliveries} deliveries / month</span>
+          {/* Delivery Address Section */}
+          <div className="bg-savera-offwhite p-3.5 rounded-2xl border border-savera-dark/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-savera-dark flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-savera-green" />
+                <span>Morning Delivery Address:</span>
+              </span>
+              {customer.addresses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewAddressFields(!showNewAddressFields)}
+                  className="text-[11px] text-savera-green font-bold hover:underline"
+                >
+                  {showNewAddressFields ? 'Use Saved' : '+ New Address'}
+                </button>
+              )}
             </div>
-            <div className="text-right">
-              <span className="font-serif text-xl font-bold text-savera-dark">₹{monthlyEstimate}</span>
-              <span className="text-[10px] text-savera-green block font-bold">Auto-calculated</span>
+
+            {customer.addresses.length > 0 && !showNewAddressFields ? (
+              <div className="space-y-1.5">
+                {customer.addresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    onClick={() => setSelectedAddressId(addr.id)}
+                    className={`cursor-pointer p-2 rounded-xl border text-xs transition ${
+                      selectedAddressId === addr.id
+                        ? 'bg-white border-savera-green ring-1 ring-savera-green text-savera-dark'
+                        : 'bg-white/60 border-savera-dark/10 text-slate-600'
+                    }`}
+                  >
+                    <span className="font-bold block">{addr.fullName} ({addr.type})</span>
+                    <span className="text-[11px] text-slate-500 block truncate">
+                      {addr.houseFlat}, {addr.street}, {addr.area} - {addr.pincode}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="House / Flat / Villa No."
+                    value={newHouse}
+                    onChange={(e) => setNewHouse(e.target.value)}
+                    className="w-full bg-white border border-savera-dark/20 rounded-xl px-2.5 py-1.5 text-xs"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Street / Society / Sector"
+                    value={newStreet}
+                    onChange={(e) => setNewStreet(e.target.value)}
+                    className="w-full bg-white border border-savera-dark/20 rounded-xl px-2.5 py-1.5 text-xs"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Area (e.g. Sector 9)"
+                    value={newArea}
+                    onChange={(e) => setNewArea(e.target.value)}
+                    className="w-full bg-white border border-savera-dark/20 rounded-xl px-2.5 py-1.5 text-xs"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Pincode"
+                    value={newPincode}
+                    onChange={(e) => setNewPincode(e.target.value)}
+                    className="w-full bg-white border border-savera-dark/20 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Subscription Initial Advance Billing Deposit (Strict Payment Gateway) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-savera-dark flex items-center gap-1">
+                <CreditCard className="w-3.5 h-3.5 text-savera-green" />
+                <span>Initial Activation Deposit Plan:</span>
+              </label>
+              <span className="text-[10px] text-savera-green font-bold bg-savera-paleGreen px-2 py-0.5 rounded-full">
+                Prepaid Morning Drops
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setAdvancePlan('7days')}
+                className={`p-2.5 rounded-xl border text-xs text-center transition ${
+                  advancePlan === '7days'
+                    ? 'bg-savera-dark text-savera-cream border-savera-dark shadow-sm'
+                    : 'bg-savera-offwhite border-savera-dark/10 text-savera-dark hover:bg-savera-cream'
+                }`}
+              >
+                <span className="font-bold block">7 Days Trial</span>
+                <span className="font-serif font-bold text-sm block mt-0.5 text-savera-saffron">
+                  ₹{Math.round((monthlyEstimate / 30) * 7)}
+                </span>
+                <span className="text-[9px] opacity-75 block">7 drops</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdvancePlan('15days')}
+                className={`p-2.5 rounded-xl border text-xs text-center transition ${
+                  advancePlan === '15days'
+                    ? 'bg-savera-dark text-savera-cream border-savera-dark shadow-sm'
+                    : 'bg-savera-offwhite border-savera-dark/10 text-savera-dark hover:bg-savera-cream'
+                }`}
+              >
+                <span className="font-bold block">15 Days Plan</span>
+                <span className="font-serif font-bold text-sm block mt-0.5 text-savera-saffron">
+                  ₹{Math.round((monthlyEstimate / 30) * 15)}
+                </span>
+                <span className="text-[9px] opacity-75 block">15 drops</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdvancePlan('30days')}
+                className={`p-2.5 rounded-xl border text-xs text-center transition ${
+                  advancePlan === '30days'
+                    ? 'bg-savera-dark text-savera-cream border-savera-dark shadow-sm'
+                    : 'bg-savera-offwhite border-savera-dark/10 text-savera-dark hover:bg-savera-cream'
+                }`}
+              >
+                <span className="font-bold block">Full Month</span>
+                <span className="font-serif font-bold text-sm block mt-0.5 text-savera-saffron">
+                  ₹{monthlyEstimate}
+                </span>
+                <span className="text-[9px] opacity-75 block">~30 drops</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Payment Method Selector */}
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+            <span className="text-[11px] font-bold text-slate-700 block">Select Activation Payment Method:</span>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setPaymentOption('wallet')}
+                className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
+                  paymentOption === 'wallet'
+                    ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-bold'
+                    : 'bg-white border-slate-200 text-slate-700'
+                }`}
+              >
+                <div>
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Savera Wallet</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    Balance: ₹{customer.walletBalance}
+                  </span>
+                </div>
+                {walletHasEnough && (
+                  <span className="text-[9px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-extrabold">
+                    1-Click
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentOption('online')}
+                className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
+                  paymentOption === 'online'
+                    ? 'bg-savera-cream/80 border-savera-dark text-savera-dark font-bold'
+                    : 'bg-white border-slate-200 text-slate-700'
+                }`}
+              >
+                <div>
+                  <span className="flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-savera-green" />
+                    <span>Razorpay UPI / Cards</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    Instant Gateway
+                  </span>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -238,13 +600,18 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full bg-savera-dark text-savera-cream font-bold py-3.5 rounded-2xl text-xs hover:bg-savera-green transition shadow-floating flex items-center justify-center gap-2"
+              disabled={isProcessing}
+              className="w-full bg-savera-dark text-savera-cream font-bold py-3.5 rounded-2xl text-xs hover:bg-savera-green transition shadow-floating flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4 text-savera-saffron" />
-              <span>Activate Milk Subscription</span>
+              <span>
+                {isProcessing
+                  ? 'Connecting to Secure Gateway...'
+                  : `Pay ₹${advanceAmount} & Activate Milk Subscription`}
+              </span>
             </button>
             <p className="text-[10px] text-center text-gray-500 mt-2">
-              You can pause, skip specific dates, or cancel anytime from your Customer Dashboard.
+              Payment is required to activate. You can pause, skip days, or cancel anytime from your dashboard.
             </p>
           </div>
         </form>
