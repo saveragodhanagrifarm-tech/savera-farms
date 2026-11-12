@@ -56,29 +56,37 @@ export default function AdminOrdersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 text-slate-300">
-            {filteredOrders.map((ord) => (
-              <tr key={ord.id} className="hover:bg-slate-900/50">
-                <td className="p-3 font-mono font-bold text-white">{ord.orderNumber}</td>
-                <td className="p-3 font-semibold">{ord.customerName}</td>
-                <td className="p-3 font-mono">{ord.customerPhone}</td>
-                <td className="p-3 text-[11px]">{ord.deliverySlot}</td>
-                <td className="p-3 font-serif font-bold text-emerald-400">₹{ord.totalAmount}</td>
-                <td className="p-3 text-[11px] font-bold text-slate-400">{ord.paymentMethod} ({ord.paymentStatus})</td>
-                <td className="p-3">
-                  <select
-                    value={ord.status}
-                    onChange={(e) => updateOrderStatus(ord.id, e.target.value as OrderStatus)}
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-savera-saffron font-bold focus:outline-none"
-                  >
-                    {statusOptions.map((st) => (
-                      <option key={st} value={st}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
+            {filteredOrders.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-slate-500">
+                  No orders found. When customer orders are placed, they will show here with real-time status controls.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredOrders.map((ord) => (
+                <tr key={ord.id} className="hover:bg-slate-900/50">
+                  <td className="p-3 font-mono font-bold text-white">{ord.orderNumber}</td>
+                  <td className="p-3 font-semibold">{ord.customerName}</td>
+                  <td className="p-3 font-mono">{ord.customerPhone}</td>
+                  <td className="p-3 text-[11px]">{ord.deliverySlot}</td>
+                  <td className="p-3 font-serif font-bold text-emerald-400">₹{ord.totalAmount}</td>
+                  <td className="p-3 text-[11px] font-bold text-slate-400">{ord.paymentMethod} ({ord.paymentStatus})</td>
+                  <td className="p-3">
+                    <select
+                      value={ord.status}
+                      onChange={(e) => updateOrderStatus(ord.id, e.target.value as OrderStatus)}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-savera-saffron font-bold focus:outline-none"
+                    >
+                      {statusOptions.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

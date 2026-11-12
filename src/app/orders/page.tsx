@@ -4,14 +4,50 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { Package, Clock, ArrowRight, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Package, Clock, ArrowRight, RefreshCw, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
 
 export default function CustomerOrdersPage() {
   const router = useRouter();
+  const { user, profile, isAdmin, openAuthModal } = useAuth();
   const { orders, addToCart, products } = useApp();
   const [filterTab, setFilterTab] = useState<'All' | 'Active' | 'Delivered' | 'Cancelled'>('All');
 
-  const filteredOrders = orders.filter((o) => {
+  if (!user && !isAdmin) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 rounded-3xl bg-savera-dark text-savera-saffron flex items-center justify-center mx-auto shadow-md">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="font-serif text-3xl font-bold text-savera-dark">Sign In to Track Your Orders</h2>
+        <p className="text-xs text-savera-brown max-w-md mx-auto leading-relaxed">
+          Log in with your verified Savera Farms account to check real-time morning 5 AM delivery dispatches and past order invoices.
+        </p>
+        <button
+          onClick={() => openAuthModal('login')}
+          className="bg-savera-dark hover:bg-savera-green text-savera-cream font-bold px-8 py-3.5 rounded-2xl text-xs transition shadow-lg inline-flex items-center gap-2"
+        >
+          <span>Sign In / Register</span>
+          <ArrowRight className="w-4 h-4 text-savera-saffron" />
+        </button>
+      </div>
+    );
+  }
+
+  const myOrders = orders.filter((o) => {
+    if (isAdmin) return true;
+    if (user) {
+      return (
+        o.customerId === user.id ||
+        o.customerId === user.email ||
+        (profile?.full_name && o.customerName === profile.full_name) ||
+        (user.email && o.customerName === user.email.split('@')[0])
+      );
+    }
+    return false;
+  });
+
+  const filteredOrders = myOrders.filter((o) => {
     if (filterTab === 'All') return true;
     if (filterTab === 'Active') return o.status !== 'Delivered' && o.status !== 'Cancelled';
     if (filterTab === 'Delivered') return o.status === 'Delivered';

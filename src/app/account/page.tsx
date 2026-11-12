@@ -43,7 +43,9 @@ export default function CustomerAccountPage() {
     supportTickets,
     createSupportTicket,
     addAddress,
+    updateAddress,
     deleteAddress,
+    setDefaultAddress,
     rechargeWallet,
     walletTransactions,
     updateCustomerProfile,
@@ -57,11 +59,13 @@ export default function CustomerAccountPage() {
   const [rechargeAmount, setRechargeAmount] = useState<number>(1000);
 
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [newFullName, setNewFullName] = useState(customer.fullName);
   const [newMobile, setNewMobile] = useState(customer.phone);
   const [newHouse, setNewHouse] = useState('');
   const [newStreet, setNewStreet] = useState('');
   const [newArea, setNewArea] = useState('');
+  const [newLandmark, setNewLandmark] = useState('');
   const [newCity, setNewCity] = useState('Panchkula');
   const [newState, setNewState] = useState('Haryana');
   const [newPincode, setNewPincode] = useState('134109');
@@ -198,24 +202,78 @@ export default function CustomerAccountPage() {
     });
   };
 
-  const handleSaveAddress = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newHouse || !newStreet || !newArea) return;
-    addAddress({
-      fullName: newFullName,
-      mobileNumber: newMobile,
-      houseFlat: newHouse,
-      street: newStreet,
-      area: newArea,
-      city: newCity,
-      state: newState,
-      pincode: newPincode,
-      type: newType,
-    });
-    setShowAddressModal(false);
+  const handleStartAddAddress = () => {
+    setEditingAddressId(null);
+    setNewFullName(activeName);
+    setNewMobile(activePhone);
     setNewHouse('');
     setNewStreet('');
     setNewArea('');
+    setNewLandmark('');
+    setNewCity('Panchkula');
+    setNewState('Haryana');
+    setNewPincode('134109');
+    setNewType('Home');
+    setShowAddressModal(true);
+  };
+
+  const handleStartEditAddress = (addr: (typeof customer.addresses)[0]) => {
+    setEditingAddressId(addr.id);
+    setNewFullName(addr.fullName);
+    setNewMobile(addr.mobileNumber);
+    setNewHouse(addr.houseFlat);
+    setNewStreet(addr.street);
+    setNewArea(addr.area || '');
+    setNewLandmark(addr.landmark || '');
+    setNewCity(addr.city);
+    setNewState(addr.state);
+    setNewPincode(addr.pincode);
+    setNewType(addr.type);
+    setShowAddressModal(true);
+  };
+
+  const handleSaveAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHouse || !newStreet) {
+      addToast('Missing Details', 'Please enter your house/flat number and street.', 'error');
+      return;
+    }
+    const areaVal = newArea.trim() || newStreet.trim();
+
+    if (editingAddressId) {
+      updateAddress(editingAddressId, {
+        fullName: newFullName,
+        mobileNumber: newMobile,
+        houseFlat: newHouse,
+        street: newStreet,
+        area: areaVal,
+        landmark: newLandmark,
+        city: newCity,
+        state: newState,
+        pincode: newPincode,
+        type: newType,
+      });
+    } else {
+      addAddress({
+        fullName: newFullName,
+        mobileNumber: newMobile,
+        houseFlat: newHouse,
+        street: newStreet,
+        area: areaVal,
+        landmark: newLandmark,
+        city: newCity,
+        state: newState,
+        pincode: newPincode,
+        type: newType,
+      });
+    }
+
+    setShowAddressModal(false);
+    setEditingAddressId(null);
+    setNewHouse('');
+    setNewStreet('');
+    setNewArea('');
+    setNewLandmark('');
   };
 
   const handleUpdateProfile = (e: React.FormEvent) => {
@@ -406,47 +464,82 @@ export default function CustomerAccountPage() {
         {/* Saved Delivery Addresses */}
         <div className="lg:col-span-12 bg-white rounded-3xl p-6 sm:p-8 border border-savera-dark/10 shadow-soft space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-savera-green" />
-              <span>Saved Delivery Addresses</span>
-            </h3>
+            <div>
+              <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-savera-green" />
+                <span>Saved Delivery Addresses</span>
+              </h3>
+              <p className="text-xs text-savera-brown/70">Manage delivery locations in Panchkula, Chandigarh & Mohali</p>
+            </div>
             <button
-              onClick={() => setShowAddressModal(true)}
-              className="bg-savera-dark text-savera-cream font-bold px-4 py-2 rounded-xl text-xs hover:bg-savera-green transition"
+              onClick={handleStartAddAddress}
+              className="bg-savera-dark text-savera-cream font-bold px-4 py-2 rounded-xl text-xs hover:bg-savera-green transition flex items-center gap-1.5 shadow-sm"
             >
-              + Add New Address
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Add New Address</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {customer.addresses.length === 0 ? (
-              <div className="sm:col-span-3 text-center py-6 text-xs text-gray-500">
-                No delivery addresses saved yet. Click "+ Add New Address" above.
+              <div className="sm:col-span-3 text-center py-10 bg-savera-offwhite/50 rounded-2xl border border-dashed border-savera-dark/20 space-y-2">
+                <MapPin className="w-8 h-8 text-savera-brown/40 mx-auto" />
+                <p className="text-xs font-bold text-savera-dark">No delivery addresses saved yet.</p>
+                <p className="text-[11px] text-savera-brown/70">Click &quot;+ Add New Address&quot; above to add your Tricity home or office address.</p>
               </div>
             ) : (
               customer.addresses.map((addr) => (
-                <div key={addr.id} className="p-4 rounded-2xl bg-savera-offwhite border border-savera-dark/15 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <span className="font-bold text-savera-dark text-xs">{addr.fullName}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-savera-dark text-savera-saffron text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        {addr.type}
-                      </span>
-                      {customer.addresses.length > 1 && (
+                <div key={addr.id} className="p-4 rounded-2xl bg-savera-offwhite border border-savera-dark/15 space-y-2 relative flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-savera-dark text-xs">{addr.fullName}</span>
+                        {addr.isDefault && (
+                          <span className="bg-emerald-100 text-emerald-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <Check className="w-2.5 h-2.5" /> Default
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="bg-savera-dark text-savera-saffron text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {addr.type}
+                        </span>
+                        <button
+                          onClick={() => handleStartEditAddress(addr)}
+                          className="text-gray-500 hover:text-savera-dark p-1 rounded-lg hover:bg-black/5 transition"
+                          title="Edit address"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           onClick={() => deleteAddress(addr.id)}
-                          className="text-gray-400 hover:text-red-500 p-0.5"
+                          className="text-gray-400 hover:text-red-500 p-1 rounded-lg hover:bg-black/5 transition"
                           title="Delete address"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      )}
+                      </div>
                     </div>
+                    <p className="text-xs text-savera-brown leading-relaxed">
+                      {addr.houseFlat}, {addr.street}{addr.area ? `, ${addr.area}` : ''}
+                      {addr.landmark ? `, Landmark: ${addr.landmark}` : ''}
+                    </p>
+                    <p className="text-xs font-semibold text-savera-dark">
+                      {addr.city}, {addr.state} - <span className="font-mono font-bold text-savera-green">{addr.pincode}</span>
+                    </p>
+                    <span className="text-[11px] font-semibold text-savera-green block">Ph: {addr.mobileNumber}</span>
                   </div>
-                  <p className="text-xs text-savera-brown leading-relaxed">
-                    {addr.houseFlat}, {addr.street}, {addr.area}, {addr.city} - {addr.pincode}
-                  </p>
-                  <span className="text-[11px] font-semibold text-savera-green block">Ph: {addr.mobileNumber}</span>
+
+                  {!addr.isDefault && (
+                    <div className="pt-2 border-t border-savera-dark/10 flex justify-end">
+                      <button
+                        onClick={() => setDefaultAddress(addr.id)}
+                        className="text-[11px] font-bold text-savera-brown hover:text-savera-green transition underline"
+                      >
+                        Set as Default
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -565,13 +658,26 @@ export default function CustomerAccountPage() {
         </div>
       )}
 
-      {/* Add Address Modal */}
+      {/* Add / Edit Address Modal */}
       {showAddressModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 shadow-floating border border-savera-dark/10 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
-              <h3 className="font-serif text-xl font-bold text-savera-dark">Add New Address</h3>
-              <button onClick={() => setShowAddressModal(false)} className="text-gray-400 hover:text-savera-dark">
+              <div>
+                <h3 className="font-serif text-xl font-bold text-savera-dark">
+                  {editingAddressId ? 'Edit Delivery Address' : 'Add New Delivery Address'}
+                </h3>
+                <p className="text-xs text-savera-brown/70">
+                  {editingAddressId ? 'Update your saved location details' : 'Save a new delivery address for morning milk orders'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddressModal(false);
+                  setEditingAddressId(null);
+                }}
+                className="text-gray-400 hover:text-savera-dark"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -604,7 +710,7 @@ export default function CustomerAccountPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. House #142, Sector 9"
+                  placeholder="e.g. House #142 or Flat 402, Block B"
                   value={newHouse}
                   onChange={(e) => setNewHouse(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
@@ -612,27 +718,65 @@ export default function CustomerAccountPage() {
               </div>
 
               <div>
-                <label className="font-bold text-savera-dark block mb-1">Street / Block</label>
+                <label className="font-bold text-savera-dark block mb-1">Street / Building / Society</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Near Geeta Mandir"
+                  placeholder="e.g. Madhya Marg Ext or Sunshine Heights"
                   value={newStreet}
                   onChange={(e) => setNewStreet(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
                 />
               </div>
 
+              <div>
+                <label className="font-bold text-savera-dark block mb-1">Sector / Area / Colony</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sector 9 Hub or Sector 22"
+                  value={newArea}
+                  onChange={(e) => setNewArea(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-savera-dark block mb-1">Landmark (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Near Geeta Mandir or Opposite Community Centre"
+                  value={newLandmark}
+                  onChange={(e) => setNewLandmark(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-bold text-savera-dark block mb-1">City</label>
-                  <input
-                    type="text"
-                    required
+                  <label className="font-bold text-savera-dark block mb-1">City (Tricity)</label>
+                  <select
                     value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
-                  />
+                    onChange={(e) => {
+                      const c = e.target.value;
+                      setNewCity(c);
+                      if (c === 'Panchkula') {
+                        setNewState('Haryana');
+                        setNewPincode('134109');
+                      } else if (c === 'Chandigarh') {
+                        setNewState('Chandigarh');
+                        setNewPincode('160022');
+                      } else if (c === 'Mohali') {
+                        setNewState('Punjab');
+                        setNewPincode('160055');
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-savera-dark/20 bg-white"
+                  >
+                    <option value="Panchkula">Panchkula (Haryana)</option>
+                    <option value="Chandigarh">Chandigarh (UT)</option>
+                    <option value="Mohali">Mohali (Punjab)</option>
+                  </select>
                 </div>
                 <div>
                   <label className="font-bold text-savera-dark block mb-1">Pincode</label>
@@ -641,7 +785,7 @@ export default function CustomerAccountPage() {
                     required
                     value={newPincode}
                     onChange={(e) => setNewPincode(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-savera-dark/20 font-mono"
+                    className="w-full px-3 py-2 rounded-xl border border-savera-dark/20 font-mono font-bold text-savera-green"
                   />
                 </div>
               </div>
@@ -670,7 +814,7 @@ export default function CustomerAccountPage() {
                 type="submit"
                 className="w-full bg-savera-dark text-savera-cream font-bold py-3 rounded-xl hover:bg-savera-green transition mt-2 shadow-md"
               >
-                Save Delivery Address
+                {editingAddressId ? 'Update Address' : 'Save Delivery Address'}
               </button>
             </form>
           </div>

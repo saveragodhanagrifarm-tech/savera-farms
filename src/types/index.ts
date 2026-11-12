@@ -108,6 +108,7 @@ export interface Address {
   state: string;
   pincode: string;
   type: 'Home' | 'Work' | 'Other';
+  isDefault?: boolean;
 }
 
 export interface Order {

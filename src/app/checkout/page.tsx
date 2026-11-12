@@ -35,6 +35,7 @@ export default function CheckoutPage() {
     selectedPincode,
     addAddress,
     deleteAddress,
+    rechargeWallet,
     placeOrder,
     cartSubtotal,
     cartDiscount,
@@ -45,7 +46,7 @@ export default function CheckoutPage() {
   } = useApp();
 
   const [selectedAddressId, setSelectedAddressId] = useState<string>(
-    customer.addresses[0]?.id || ''
+    customer.addresses.find((a) => a.isDefault)?.id || customer.addresses[0]?.id || ''
   );
 
   // Address Form state
@@ -93,13 +94,14 @@ export default function CheckoutPage() {
 
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!houseFlat || !street || !area) return;
+    if (!houseFlat || !street) return;
+    const areaVal = area.trim() || street.trim();
     const newId = addAddress({
       fullName,
       mobileNumber,
       houseFlat,
       street,
-      area,
+      area: areaVal,
       landmark,
       city,
       state,
@@ -464,6 +466,38 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Interactive Payment Fields */}
+                    {isSelected && p.id === 'Wallets' && customer.walletBalance < cartTotal && (
+                      <div className="mt-3 pt-3 border-t border-savera-dark/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-amber-50/70 p-3 rounded-xl border border-amber-200">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-bold text-amber-900">Wallet balance is low (₹{customer.walletBalance})</p>
+                          <p className="text-[11px] text-amber-700">Add ₹{cartTotal - customer.walletBalance} more to complete this order instantly via wallet.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const topupAmt = Math.max(500, cartTotal - customer.walletBalance);
+                            await openRazorpayCheckout({
+                              amountInRupees: topupAmt,
+                              customerName: selectedAddress?.fullName || customer.fullName,
+                              customerEmail: customer.email,
+                              customerPhone: selectedAddress?.mobileNumber || customer.phone,
+                              orderNumber: `WAL-${Math.floor(10000 + Math.random() * 90000)}`,
+                              onSuccess: (paymentId) => {
+                                rechargeWallet(topupAmt, paymentId, 'Quick Wallet Top-up at Checkout');
+                              },
+                              onFailure: (err) => {
+                                addToast('Top-up Incomplete', err.message || 'Payment not completed.', 'info');
+                              },
+                            });
+                          }}
+                          className="bg-savera-dark hover:bg-savera-green text-savera-cream px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition shadow-sm"
+                        >
+                          + Recharge ₹{Math.max(500, cartTotal - customer.walletBalance)}
+                        </button>
+                      </div>
+                    )}
+
                     {isSelected && p.id === 'UPI' && (
                       <div className="mt-3 pt-3 border-t border-savera-dark/10 space-y-2">
                         <label className="text-[11px] font-bold text-savera-dark block">Enter Virtual Payment Address (VPA):</label>

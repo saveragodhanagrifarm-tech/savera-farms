@@ -1,4 +1,4 @@
 # Cloudflare Pages SPA & Fallback Routing
-/orders/*  /orders/ORD-9820/index.html  200
+/orders/*  /orders/preview/index.html  200
 /shop/*    /shop/index.html             200
 

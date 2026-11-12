@@ -32,6 +32,7 @@ import {
   Factory,
   MapPin,
   Tag,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -52,6 +53,7 @@ export default function AdminDashboardPage() {
     updateTicketStatus,
     updateOrderStatus,
     rechargeWallet,
+    resetToFreshBaseline,
     addToast,
   } = useApp();
 
@@ -224,7 +226,7 @@ export default function AdminDashboardPage() {
                 <CheckCircle2 className="w-5 h-5" />
               </div>
             </div>
-            <h3 className="font-serif text-3xl font-bold text-white">{resolvedCount + 14}</h3>
+            <h3 className="font-serif text-3xl font-bold text-white">{resolvedCount}</h3>
             <span className="text-[11px] text-savera-saffron flex items-center gap-1 font-semibold">
               <Milk className="w-3.5 h-3.5" /> Milk Replacements Handled
             </span>
@@ -1280,10 +1282,12 @@ export default function AdminDashboardPage() {
   // ==========================================
   // VIEW 6: SUPER ADMIN & EXECUTIVE CONTROL VIEW
   // ==========================================
-  const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 124580);
-  const ordersToday = orders.length + 246;
-  const activeSubsCount = subscriptions.filter((s) => s.status === 'Active').length + 135;
-  const lowStockCount = batches.filter((b) => b.status === 'Expiring Soon' || b.status === 'Depleted').length + 16;
+  const totalRevenue = orders
+    .filter((o) => o.paymentStatus === 'Paid' && o.status !== 'Cancelled' && o.status !== 'Refunded')
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+  const ordersToday = orders.length;
+  const activeSubsCount = subscriptions.filter((s) => s.status === 'Active').length;
+  const lowStockCount = batches.filter((b) => b.status === 'Expiring Soon' || b.status === 'Depleted').length;
 
   return (
     <div className="space-y-8">
@@ -1300,6 +1304,18 @@ export default function AdminDashboardPage() {
           <p className="text-xs text-slate-400">Live operational overview for Savera Farms D2C Platform</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              if (window.confirm('Reset all test orders, subscriptions, and revenue back to 0 for clean testing?')) {
+                resetToFreshBaseline();
+              }
+            }}
+            className="bg-red-950/80 hover:bg-red-900 border border-red-700/50 text-red-300 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition"
+            title="Reset revenue and mock orders to zero for testing"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Reset Baseline (₹0)</span>
+          </button>
           <Link
             href="/admin/products"
             className="bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition"
@@ -1419,20 +1435,28 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
-                {orders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-slate-900/50">
-                    <td className="p-3 font-mono font-bold text-white">{ord.orderNumber}</td>
-                    <td className="p-3 font-semibold">{ord.customerName}</td>
-                    <td className="p-3">{ord.items.length} items</td>
-                    <td className="p-3 font-serif font-bold text-emerald-400">₹{ord.totalAmount}</td>
-                    <td className="p-3 text-[11px]">{ord.deliverySlot}</td>
-                    <td className="p-3">
-                      <span className="bg-savera-dark text-savera-saffron px-2.5 py-0.5 rounded-full text-[10px] font-bold">
-                        {ord.status}
-                      </span>
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                      No customer orders yet. When a customer places an order, it will appear here in real time.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  orders.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-slate-900/50">
+                      <td className="p-3 font-mono font-bold text-white">{ord.orderNumber}</td>
+                      <td className="p-3 font-semibold">{ord.customerName}</td>
+                      <td className="p-3">{ord.items.length} items</td>
+                      <td className="p-3 font-serif font-bold text-emerald-400">₹{ord.totalAmount}</td>
+                      <td className="p-3 text-[11px]">{ord.deliverySlot}</td>
+                      <td className="p-3">
+                        <span className="bg-savera-dark text-savera-saffron px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                          {ord.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

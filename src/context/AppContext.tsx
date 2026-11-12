@@ -73,7 +73,10 @@ interface AppContextType {
   selectedPincode: string;
   setSelectedPincode: (pin: string) => void;
   addAddress: (address: Omit<Address, 'id'>) => string;
+  updateAddress: (id: string, address: Partial<Omit<Address, 'id'>>) => void;
   deleteAddress: (id: string) => void;
+  setDefaultAddress: (id: string) => void;
+  resetToFreshBaseline: () => void;
   rechargeWallet: (amount: number, referenceId?: string, description?: string) => void;
   walletTransactions: WalletTransaction[];
   isAfterCutoff: boolean;
@@ -189,8 +192,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setCart(getStoredData('savera_cart_v2', []));
     setCoupons(getStoredData('savera_coupons_v2', SEED_COUPONS));
-    setSubscriptions(getStoredData('savera_subscriptions_v2', SEED_SUBSCRIPTIONS));
-    setOrders(getStoredData('savera_orders_v2', SEED_ORDERS));
+    setSubscriptions(getStoredData('savera_subscriptions_v3', SEED_SUBSCRIPTIONS));
+    setOrders(getStoredData('savera_orders_v3', SEED_ORDERS));
     setBatches(getStoredData('savera_batches_v2', SEED_BATCHES));
     setProductionLogs(getStoredData('savera_production_v2', SEED_PRODUCTION));
     setRawMaterials(getStoredData('savera_raw_v2', SEED_RAW_MATERIALS));
@@ -198,7 +201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPurchaseOrders(getStoredData('savera_purchase_orders_v2', SEED_PURCHASE_ORDERS));
     setDeliveryZones(getStoredData('savera_zones_v3', SEED_DELIVERY_ZONES));
     setCustomer(getStoredData('savera_customer_v2', SEED_CUSTOMER));
-    setWalletTransactions(getStoredData('savera_wallet_tx_v2', []));
+    setWalletTransactions(getStoredData('savera_wallet_tx_v3', []));
     setSupportTickets(getStoredData('savera_tickets_v2', SEED_TICKETS));
     setAuditLogs(getStoredData('savera_audit_v2', SEED_AUDIT_LOGS));
     setReviews(getStoredData('savera_reviews_v2', SEED_REVIEWS));
@@ -214,47 +217,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const codeBase = realName.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5) || 'SAVERA';
       const dynamicReferral = `SAV-${codeBase}100`;
 
-      setCustomer((prev) => {
-        let updatedAddresses = prev.addresses;
-        if (
-          updatedAddresses.length === 0 ||
-          updatedAddresses.some((a) => a.fullName === 'Priya Sharma' || a.fullName === 'Savera Guest' || a.fullName === 'Savera Customer')
-        ) {
-          updatedAddresses = [
-            {
-              id: 'addr-user-' + user.id.slice(0, 6),
-              fullName: realName,
-              mobileNumber: realPhone || '9876543210',
-              houseFlat: profile?.address?.houseFlat || 'House #142',
-              street: profile?.address?.street || 'Sector 9',
-              area: profile?.address?.area || 'Sector 9 Hub',
-              city: profile?.address?.city || 'Panchkula',
-              state: 'Haryana',
-              pincode: profile?.address?.pincode || '134109',
-              type: 'Home',
-            },
-          ];
-        } else {
-          updatedAddresses = updatedAddresses.map((a) => ({
-            ...a,
-            fullName: a.fullName === 'Priya Sharma' ? realName : a.fullName,
-            mobileNumber: a.fullName === 'Priya Sharma' && realPhone ? realPhone : a.mobileNumber,
-          }));
-        }
+      // Load user-scoped addresses from local storage
+      const userAddressesKey = `savera_user_addresses_${user.id}`;
+      const userAddresses = getStoredData<Address[]>(userAddressesKey, []);
 
-        return {
-          id: user.id,
-          fullName: realName,
-          email: realEmail,
-          phone: realPhone || prev.phone,
-          walletBalance: typeof profile?.wallet_balance === 'number' ? profile.wallet_balance : prev.walletBalance,
-          rewardPoints: typeof profile?.reward_points === 'number' ? profile.reward_points : prev.rewardPoints,
-          referralCode: dynamicReferral,
-          totalOrders: prev.totalOrders,
-          totalSpent: prev.totalSpent,
-          addresses: updatedAddresses,
-        };
-      });
+      // Load user-scoped wallet balance
+      const userWalletKey = `savera_user_wallet_${user.id}`;
+      const initialWallet = typeof profile?.wallet_balance === 'number' ? profile.wallet_balance : 0;
+      const storedWallet = getStoredData<number>(userWalletKey, initialWallet);
+
+      setCustomer((prev) => ({
+        id: user.id,
+        fullName: realName,
+        email: realEmail,
+        phone: realPhone || prev.phone,
+        walletBalance: storedWallet,
+        rewardPoints: typeof profile?.reward_points === 'number' ? profile.reward_points : 50,
+        referralCode: dynamicReferral,
+        totalOrders: prev.totalOrders,
+        totalSpent: prev.totalSpent,
+        addresses: userAddresses,
+      }));
 
       // Fetch user-specific orders from Supabase
       supabase
@@ -355,10 +338,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isHydrated.current) setStoredData('savera_coupons_v2', coupons);
   }, [coupons]);
   useEffect(() => {
-    if (isHydrated.current) setStoredData('savera_subscriptions_v2', subscriptions);
+    if (isHydrated.current) setStoredData('savera_subscriptions_v3', subscriptions);
   }, [subscriptions]);
   useEffect(() => {
-    if (isHydrated.current) setStoredData('savera_orders_v2', orders);
+    if (isHydrated.current) setStoredData('savera_orders_v3', orders);
   }, [orders]);
   useEffect(() => {
     if (isHydrated.current) setStoredData('savera_batches_v2', batches);
@@ -514,20 +497,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAddress = (addrData: Omit<Address, 'id'>) => {
     const newId = 'addr-' + Date.now();
     const newAddr: Address = { ...addrData, id: newId };
-    setCustomer((prev) => ({
-      ...prev,
-      addresses: [...prev.addresses, newAddr],
-    }));
+    setCustomer((prev) => {
+      const isFirst = prev.addresses.length === 0;
+      if (isFirst) newAddr.isDefault = true;
+      const updated = [...prev.addresses, newAddr];
+      if (typeof window !== 'undefined' && user?.id) {
+        localStorage.setItem(`savera_user_addresses_${user.id}`, JSON.stringify(updated));
+      }
+      return {
+        ...prev,
+        addresses: updated,
+      };
+    });
     addToast('Address Saved', 'New delivery address saved to your profile.', 'success');
     return newId;
   };
 
+  const updateAddress = (id: string, updatedData: Partial<Omit<Address, 'id'>>) => {
+    setCustomer((prev) => {
+      const updated = prev.addresses.map((a) => (a.id === id ? { ...a, ...updatedData } : a));
+      if (typeof window !== 'undefined' && user?.id) {
+        localStorage.setItem(`savera_user_addresses_${user.id}`, JSON.stringify(updated));
+      }
+      return {
+        ...prev,
+        addresses: updated,
+      };
+    });
+    addToast('Address Updated', 'Delivery address details updated successfully.', 'success');
+  };
+
   const deleteAddress = (id: string) => {
-    setCustomer((prev) => ({
-      ...prev,
-      addresses: prev.addresses.filter((a) => a.id !== id),
-    }));
+    setCustomer((prev) => {
+      const updated = prev.addresses.filter((a) => a.id !== id);
+      if (typeof window !== 'undefined' && user?.id) {
+        localStorage.setItem(`savera_user_addresses_${user.id}`, JSON.stringify(updated));
+      }
+      return {
+        ...prev,
+        addresses: updated,
+      };
+    });
     addToast('Address Removed', 'Address deleted from your profile.', 'info');
+  };
+
+  const setDefaultAddress = (id: string) => {
+    setCustomer((prev) => {
+      const updated = prev.addresses.map((a) => ({ ...a, isDefault: a.id === id }));
+      if (typeof window !== 'undefined' && user?.id) {
+        localStorage.setItem(`savera_user_addresses_${user.id}`, JSON.stringify(updated));
+      }
+      return {
+        ...prev,
+        addresses: updated,
+      };
+    });
+    addToast('Default Address Set', 'Preferred delivery address set.', 'info');
   };
 
   const rechargeWallet = (amount: number, referenceId?: string, description?: string) => {
@@ -538,7 +563,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const newBal = prev.walletBalance + amount;
       const tx: WalletTransaction = {
         id: 'tx-' + Date.now(),
-        customerId: prev.id,
+        customerId: user?.id || prev.id,
         type: 'Credit',
         amount,
         balanceAfter: newBal,
@@ -549,10 +574,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setWalletTransactions((txPrev) => {
         const updatedTx = [tx, ...txPrev];
         if (typeof window !== 'undefined') {
-          localStorage.setItem('savera_wallet_tx_v2', JSON.stringify(updatedTx));
+          localStorage.setItem('savera_wallet_tx_v3', JSON.stringify(updatedTx));
         }
         return updatedTx;
       });
+
+      if (typeof window !== 'undefined' && user?.id) {
+        localStorage.setItem(`savera_user_wallet_${user.id}`, JSON.stringify(newBal));
+      }
 
       try {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -567,7 +596,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         walletBalance: newBal,
       };
     });
-    addToast('Wallet Recharged!', `₹${amount} added successfully to your Savera Wallet.`, 'success');
+    addToast('Wallet Recharged! 💳', `₹${amount} added successfully to your Savera Wallet.`, 'success');
     logAuditAction('Wallet Recharge', customer.id, `Credited ₹${amount} (Ref: ${ref})`);
   };
 
@@ -715,8 +744,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
       orderNumber: 'SAV-' + Math.floor(10000 + Math.random() * 90000),
       customerId: user?.id || customer.id,
-      customerName: profile?.full_name || customer.fullName,
-      customerPhone: profile?.phone || customer.phone,
+      customerName: deliveryAddress.fullName || profile?.full_name || customer.fullName,
+      customerPhone: deliveryAddress.mobileNumber || profile?.phone || customer.phone,
       items: [...cart],
       subtotal: cartSubtotal,
       deliveryFee,
@@ -755,10 +784,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setWalletTransactions((txPrev) => {
         const updatedTx = [tx, ...txPrev];
         if (typeof window !== 'undefined') {
-          localStorage.setItem('savera_wallet_tx_v2', JSON.stringify(updatedTx));
+          localStorage.setItem('savera_wallet_tx_v3', JSON.stringify(updatedTx));
         }
         return updatedTx;
       });
+
+      if (typeof window !== 'undefined' && user?.id) {
+        localStorage.setItem(`savera_user_wallet_${user.id}`, JSON.stringify(remainingBal));
+      }
     }
 
     // Reward points
@@ -813,13 +846,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
     setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status, updatedAt: new Date().toISOString() } : o))
+      prev.map((o) => {
+        if (o.id === orderId) {
+          const updatedPaymentStatus = (status === 'Delivered' && o.paymentMethod === 'Cash on Delivery') ? 'Paid' as const : o.paymentStatus;
+          return { ...o, status, paymentStatus: updatedPaymentStatus, updatedAt: new Date().toISOString() };
+        }
+        return o;
+      })
     );
     addToast('Order Status Updated', `Order ${orderId} marked as ${status}.`, 'info');
     logAuditAction('Order Status Change', orderId, `Updated status to ${status}`);
     try {
       supabase.from('orders').update({ status }).or(`id.eq.${orderId},order_number.eq.${orderId}`).then();
     } catch (e) {}
+  };
+
+  const resetToFreshBaseline = () => {
+    setOrders([]);
+    setSubscriptions([]);
+    setWalletTransactions([]);
+    setCart([]);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('savera_orders_v3', JSON.stringify([]));
+      localStorage.setItem('savera_subscriptions_v3', JSON.stringify([]));
+      localStorage.setItem('savera_wallet_tx_v3', JSON.stringify([]));
+      localStorage.removeItem('savera_orders_v2');
+      localStorage.removeItem('savera_subscriptions_v2');
+      localStorage.removeItem('savera_wallet_tx_v2');
+    }
+    addToast('Baseline Reset to Zero (₹0)', 'All customer orders, active subscriptions, and revenue reset to 0.', 'success');
+    logAuditAction('System Reset', 'Platform Baseline', 'Super Admin reset orders & revenue to zero');
   };
 
   const cancelOrder = (orderId: string, reason?: string) => {
@@ -1090,7 +1146,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedPincode,
         setSelectedPincode,
         addAddress,
+        updateAddress,
         deleteAddress,
+        setDefaultAddress,
+        resetToFreshBaseline,
         rechargeWallet,
         walletTransactions,
         isAfterCutoff,

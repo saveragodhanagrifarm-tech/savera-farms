@@ -7,7 +7,9 @@ import { Milk, Calendar, PauseCircle, PlayCircle } from 'lucide-react';
 export default function AdminSubscriptionsPage() {
   const { subscriptions, togglePauseSubscription } = useApp();
 
-  const totalVolumeForecast = subscriptions.reduce((sum, s) => sum + s.quantityPerDelivery, 0) + 180;
+  const totalVolumeForecast = subscriptions
+    .filter((s) => s.status === 'Active')
+    .reduce((sum, s) => sum + s.quantityPerDelivery, 0);
 
   return (
     <div className="space-y-6">
@@ -40,31 +42,39 @@ export default function AdminSubscriptionsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 text-slate-300">
-            {subscriptions.map((sub) => (
-              <tr key={sub.id} className="hover:bg-slate-900/50">
-                <td className="p-3 font-mono font-bold text-white">{sub.id}</td>
-                <td className="p-3 font-semibold">{sub.customerName}</td>
-                <td className="p-3">{sub.productName}</td>
-                <td className="p-3 font-bold text-emerald-400">{sub.quantityPerDelivery}L</td>
-                <td className="p-3">{sub.frequency}</td>
-                <td className="p-3 text-[11px]">{sub.deliverySlot}</td>
-                <td className="p-3">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    sub.status === 'Active' ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'
-                  }`}>
-                    {sub.status}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <button
-                    onClick={() => togglePauseSubscription(sub.id)}
-                    className="bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1 rounded-lg hover:text-white"
-                  >
-                    {sub.status === 'Active' ? 'Pause' : 'Resume'}
-                  </button>
+            {subscriptions.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="p-8 text-center text-slate-500">
+                  No active milk subscriptions registered. Customer subscriptions will appear here.
                 </td>
               </tr>
-            ))}
+            ) : (
+              subscriptions.map((sub) => (
+                <tr key={sub.id} className="hover:bg-slate-900/50">
+                  <td className="p-3 font-mono font-bold text-white">{sub.id}</td>
+                  <td className="p-3 font-semibold">{sub.customerName}</td>
+                  <td className="p-3">{sub.productName}</td>
+                  <td className="p-3 font-bold text-emerald-400">{sub.quantityPerDelivery}L</td>
+                  <td className="p-3">{sub.frequency}</td>
+                  <td className="p-3 text-[11px]">{sub.deliverySlot}</td>
+                  <td className="p-3">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      sub.status === 'Active' ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'
+                    }`}>
+                      {sub.status}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => togglePauseSubscription(sub.id)}
+                      className="bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1 rounded-lg hover:text-white"
+                    >
+                      {sub.status === 'Active' ? 'Pause' : 'Resume'}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
