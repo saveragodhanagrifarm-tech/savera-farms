@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
-import { useAuth, PRESET_ACCOUNTS } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   Truck,
   Phone,
@@ -138,12 +138,6 @@ export default function DeliveryExecutivePage() {
     setIsLoggingIn(false);
   };
 
-  const handleFillRider = (index: number) => {
-    setRiderEmail(PRESET_ACCOUNTS[index].email);
-    setRiderPassword(PRESET_ACCOUNTS[index].password);
-    setRiderError('');
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
@@ -179,31 +173,6 @@ export default function DeliveryExecutivePage() {
               {riderError}
             </div>
           )}
-
-          {/* Quick Preset Rider Accounts (Rider 1 & Rider 2) */}
-          <div className="bg-slate-900 p-3.5 rounded-2xl border border-slate-800 space-y-2">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-              Assigned Field Delivery Accounts:
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleFillRider(3)}
-                className="text-left p-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:border-emerald-500 hover:bg-slate-800 transition"
-              >
-                <span className="font-bold text-emerald-400 block truncate">🚚 Rider 1 (Panchkula)</span>
-                <span className="text-[10px] text-slate-400 block truncate font-mono">rider1@saverafarms.com</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFillRider(4)}
-                className="text-left p-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:border-emerald-500 hover:bg-slate-800 transition"
-              >
-                <span className="font-bold text-emerald-400 block truncate">🚚 Rider 2 (Chandigarh)</span>
-                <span className="text-[10px] text-slate-400 block truncate font-mono">rider2@saverafarms.com</span>
-              </button>
-            </div>
-          </div>
 
           <form onSubmit={handleRiderLogin} className="space-y-4 text-xs">
             <div>

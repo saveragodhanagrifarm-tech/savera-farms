@@ -88,11 +88,10 @@ export default function CustomerOrdersPage() {
           <button
             key={tab}
             onClick={() => setFilterTab(tab)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-              filterTab === tab
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${filterTab === tab
                 ? 'bg-savera-dark text-savera-saffron shadow-sm'
                 : 'bg-white text-savera-dark hover:bg-savera-cream border border-savera-dark/10'
-            }`}
+              }`}
           >
             {tab} {tab === 'All' ? `(${orders.length})` : ''}
           </button>
@@ -122,13 +121,12 @@ export default function CustomerOrdersPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-xs text-savera-dark font-mono">Order #{ord.orderNumber}</span>
                   <span
-                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                      ord.status === 'Delivered'
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${ord.status === 'Delivered'
                         ? 'bg-emerald-100 text-emerald-800'
                         : ord.status === 'Cancelled'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-savera-paleGreen text-savera-green'
-                    }`}
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-savera-paleGreen text-savera-green'
+                      }`}
                   >
                     {ord.status}
                   </span>

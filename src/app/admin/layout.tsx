@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { useAuth, PRESET_ACCOUNTS } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { AdminRole } from '@/types';
 import {
   LayoutDashboard,
@@ -73,12 +73,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setAdminError('Access Denied: This account does not possess Super Admin privileges. Delivery riders and customers cannot view business financials.');
     }
     setIsLoggingIn(false);
-  };
-
-  const handleFillAdmin = (presetIndex: number) => {
-    setAdminEmail(PRESET_ACCOUNTS[presetIndex].email);
-    setAdminPassword(PRESET_ACCOUNTS[presetIndex].password);
-    setAdminError('');
   };
 
   if (isLoading) {
@@ -166,31 +160,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </button>
               </div>
             )}
-
-            {/* Quick Preset Admin Fill */}
-            <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-2">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-                Authorized Super Admin Accounts:
-              </span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleFillAdmin(0)}
-                  className="text-left p-2 rounded-xl border border-slate-700 bg-slate-900 hover:border-savera-saffron hover:bg-slate-800 transition"
-                >
-                  <span className="font-bold text-savera-saffron block truncate">👑 Super Admin</span>
-                  <span className="text-[10px] text-slate-400 block truncate">admin@saverafarms.com</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillAdmin(1)}
-                  className="text-left p-2 rounded-xl border border-slate-700 bg-slate-900 hover:border-savera-saffron hover:bg-slate-800 transition"
-                >
-                  <span className="font-bold text-amber-400 block truncate">⚙️ Operations Admin</span>
-                  <span className="text-[10px] text-slate-400 block truncate">operations@saverafarms.com</span>
-                </button>
-              </div>
-            </div>
 
             <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
               <div>
