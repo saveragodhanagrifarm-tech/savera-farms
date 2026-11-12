@@ -212,14 +212,14 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-12 space-y-6 sm:space-y-8">
       {/* Checkout Title */}
-      <div className="flex items-center justify-between pb-4 border-b border-savera-dark/10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-savera-dark/10">
         <div>
           <span className="text-xs font-bold text-savera-green uppercase tracking-widest block">
             Farm-to-Doorstep Delivery
           </span>
-          <h1 className="font-serif text-3xl font-bold text-savera-dark">Express Checkout</h1>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-savera-dark">Express Checkout</h1>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-savera-green font-bold bg-savera-paleGreen px-3.5 py-1.5 rounded-full">
           <Lock className="w-4 h-4" />

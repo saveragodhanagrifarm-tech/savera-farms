@@ -94,7 +94,7 @@ function ShopContent() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-12 space-y-6 sm:space-y-8">
       {/* Header Banner */}
       <div className="bg-savera-dark text-savera-cream rounded-3xl p-6 sm:p-10 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>

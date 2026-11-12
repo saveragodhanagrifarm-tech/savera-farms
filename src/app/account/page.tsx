@@ -300,9 +300,9 @@ export default function CustomerAccountPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-12 space-y-6 sm:space-y-8">
       {/* Account Profile Banner */}
-      <div className="bg-savera-dark text-savera-cream rounded-3xl p-6 sm:p-8 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-savera-dark text-savera-cream rounded-3xl p-5 sm:p-8 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-savera-saffron text-savera-brown flex items-center justify-center font-serif text-2xl font-bold shadow-md shrink-0">
             {activeName.charAt(0).toUpperCase()}
@@ -325,7 +325,7 @@ export default function CustomerAccountPage() {
         </div>
 
         {/* Savera Wallet & Rewards */}
-        <div className="flex items-center gap-4 bg-savera-green/40 p-4 rounded-2xl border border-savera-saffron/30 shrink-0">
+        <div className="flex items-center gap-4 bg-savera-green/40 p-4 rounded-2xl border border-savera-saffron/30 w-full sm:w-auto">
           <div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] uppercase font-bold text-savera-saffron block">Savera Wallet</span>

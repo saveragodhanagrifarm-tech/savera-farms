@@ -29,6 +29,8 @@ import {
   ArrowRight,
   Sparkles,
   ShieldAlert,
+  Menu,
+  X,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const cleanPath = (p: string) => p.replace(/\/+$/, '') || '/';
   const normalizedCurrentPath = cleanPath(pathname);
@@ -247,20 +250,63 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Authenticated Super Admin View
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-slate-950 border-r border-slate-800 p-4 flex flex-col justify-between shrink-0">
+      {/* Mobile Sticky Header Bar */}
+      <div className="md:hidden flex items-center justify-between p-3.5 bg-slate-950 border-b border-slate-800 shrink-0 sticky top-0 z-30 shadow-md">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-savera-saffron text-savera-brown flex items-center justify-center font-serif font-bold text-base shadow-sm">
+            S
+          </div>
+          <div>
+            <span className="font-serif text-sm font-bold text-white tracking-wide block leading-none">SAVERA ADMIN</span>
+            <span className="text-[10px] text-savera-saffron font-bold uppercase tracking-wider block mt-0.5">
+              {allNavItems.find((n) => cleanPath(n.href) === normalizedCurrentPath)?.label || 'Super Admin Console'}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-savera-saffron hover:text-white hover:bg-slate-800 transition"
+          aria-label="Toggle Navigation Menu"
+        >
+          {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mobile Drawer Backdrop */}
+      {mobileNavOpen && (
+        <div
+          onClick={() => setMobileNavOpen(false)}
+          className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity"
+        />
+      )}
+
+      {/* Sidebar (Desktop static, Mobile drawer overlay) */}
+      <aside
+        className={`fixed md:static inset-y-0 left-0 z-50 w-72 md:w-64 bg-slate-950 border-r border-slate-800 p-4 flex flex-col justify-between shrink-0 overflow-y-auto transition-transform duration-300 ease-in-out ${
+          mobileNavOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
         <div className="space-y-6">
           {/* Logo & Head Office Badge */}
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-2xl bg-savera-saffron text-savera-brown flex items-center justify-center font-serif font-bold text-xl shadow-md">
-              S
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-savera-saffron text-savera-brown flex items-center justify-center font-serif font-bold text-xl shadow-md">
+                S
+              </div>
+              <div>
+                <span className="font-serif text-lg font-bold text-white tracking-wide block">SAVERA ENTERPRISE</span>
+                <span className="text-[10px] text-savera-saffron uppercase tracking-widest block">
+                  Panchkula & Chandigarh Hub
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="font-serif text-lg font-bold text-white tracking-wide block">SAVERA ENTERPRISE</span>
-              <span className="text-[10px] text-savera-saffron uppercase tracking-widest block">
-                Panchkula & Chandigarh Hub
-              </span>
-            </div>
+            {/* Close button inside mobile drawer */}
+            <button
+              onClick={() => setMobileNavOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Authenticated Identity Card (Strict RBAC - No arbitrary role switching) */}
@@ -292,6 +338,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setMobileNavOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
                     isActive
                       ? 'bg-savera-dark text-savera-saffron border border-savera-green/40 shadow-sm'
@@ -310,6 +357,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="pt-4 border-t border-slate-800 space-y-3">
           <Link
             href="/delivery"
+            onClick={() => setMobileNavOpen(false)}
             className="flex items-center justify-between text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-800/40 px-3 py-2 rounded-xl transition"
           >
             <span className="flex items-center gap-2">
@@ -320,11 +368,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
 
           <div className="flex items-center justify-between px-2 text-xs">
-            <Link href="/" className="text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <Link
+              href="/"
+              onClick={() => setMobileNavOpen(false)}
+              className="text-slate-400 hover:text-white transition flex items-center gap-1.5"
+            >
               <span>Public Storefront</span>
             </Link>
             <button
-              onClick={() => signOut()}
+              onClick={() => {
+                setMobileNavOpen(false);
+                signOut();
+              }}
               className="text-red-400 hover:text-red-300 transition flex items-center gap-1"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -335,7 +390,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto overflow-y-auto">
+      <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto overflow-y-auto">
         {children}
       </main>
     </div>
