@@ -177,77 +177,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const isHydrated = useRef(false);
 
+  // Helper to compute effective products by overlaying dynamic overrides onto canonical SEED_PRODUCTS
+  const computeEffectiveProducts = (): Product[] => {
+    const priceOverrides = getStoredData<Record<string, { price: number; mrp: number; discountPct: number; stock?: number }>>(
+      'savera_variant_overrides_v1',
+      {}
+    );
+    const productOverrides = getStoredData<Record<string, Partial<Product>>>('savera_product_overrides_v1', {});
+    const customProducts = getStoredData<Product[]>('savera_custom_products_v1', []);
+    const deletedProductIds = getStoredData<string[]>('savera_deleted_products_v1', []);
+
+    const baseProducts = SEED_PRODUCTS.filter((sp) => !deletedProductIds.includes(sp.id)).map((sp) => {
+      const pOverride = productOverrides[sp.id] || {};
+      const updatedVariants = sp.variants.map((v) => {
+        const vOverride = priceOverrides[v.id];
+        if (vOverride) {
+          const mrp = Number(vOverride.mrp) || v.mrp;
+          const price = Number(vOverride.price) || v.price;
+          const discountPct = vOverride.discountPct !== undefined ? vOverride.discountPct : mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+          return {
+            ...v,
+            price,
+            mrp,
+            discountPct,
+            stock: vOverride.stock !== undefined ? Number(vOverride.stock) : v.stock,
+          };
+        }
+        return v;
+      });
+
+      return {
+        ...sp,
+        ...pOverride,
+        variants: updatedVariants,
+      };
+    });
+
+    const customMapped = customProducts.filter((cp) => !deletedProductIds.includes(cp.id)).map((cp) => {
+      const pOverride = productOverrides[cp.id] || {};
+      const updatedVariants = cp.variants.map((v) => {
+        const vOverride = priceOverrides[v.id];
+        if (vOverride) {
+          const mrp = Number(vOverride.mrp) || v.mrp;
+          const price = Number(vOverride.price) || v.price;
+          const discountPct = vOverride.discountPct !== undefined ? vOverride.discountPct : mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+          return {
+            ...v,
+            price,
+            mrp,
+            discountPct,
+            stock: vOverride.stock !== undefined ? Number(vOverride.stock) : v.stock,
+          };
+        }
+        return v;
+      });
+      return { ...cp, ...pOverride, variants: updatedVariants };
+    });
+
+    return [...baseProducts, ...customMapped];
+  };
+
   // Load stored data on mount
   useEffect(() => {
-    let rawStoredProducts = getStoredData<Product[]>('savera_products_v5', []);
-    if (!rawStoredProducts || rawStoredProducts.length === 0) {
-      // Check v4 and upgrade old default milk price (92 -> 100)
-      const v4Products = getStoredData<Product[]>('savera_products_v4', []);
-      if (v4Products && v4Products.length > 0) {
-        rawStoredProducts = v4Products.map((p) => {
-          if (p.id === 'prod-a2-milk') {
-            const v1 = p.variants.find((v) => v.id === 'var-a2m-1l');
-            if (v1 && v1.price === 92) {
-              const updatedVariants = p.variants.map((v) =>
-                v.id === 'var-a2m-1l' ? { ...v, price: 100, mrp: 110, discountPct: 9 } : v
-              );
-              return { ...p, variants: updatedVariants };
-            }
-          }
-          return p;
-        });
-      }
-    }
-
-    const storedMap = new Map((rawStoredProducts || []).map((p) => [p.id, p]));
-    const mergedProducts = SEED_PRODUCTS.map((sp) => {
-      const custom = storedMap.get(sp.id);
-      return custom ? { ...sp, ...custom } : sp;
-    });
-    // Append any extra products added dynamically
-    (rawStoredProducts || []).forEach((p) => {
-      if (!SEED_PRODUCTS.some((sp) => sp.id === p.id)) {
-        mergedProducts.push(p);
-      }
-    });
-    setProducts(mergedProducts);
+    // Purge legacy full-array cache keys to prevent stale price persistence
     if (typeof window !== 'undefined') {
-      localStorage.setItem('savera_products_v5', JSON.stringify(mergedProducts));
-      localStorage.setItem('savera_products_v4', JSON.stringify(mergedProducts));
+      localStorage.removeItem('savera_products_v5');
+      localStorage.removeItem('savera_products_v4');
+      localStorage.removeItem('savera_products_v3');
+      localStorage.removeItem('savera_products_v2');
+      localStorage.removeItem('savera_products');
     }
 
-    const handleStorageChange = (e: StorageEvent) => {
-      if ((e.key === 'savera_products_v5' || e.key === 'savera_products_v4') && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProducts(parsed);
-          }
-        } catch (err) {}
-      }
-    };
-    const handleCustomProductSync = (e: any) => {
-      if (e.detail && Array.isArray(e.detail)) {
-        setProducts(e.detail);
-      }
-    };
-    const handleFocusSync = () => {
-      const stored = localStorage.getItem('savera_products_v5') || localStorage.getItem('savera_products_v4');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProducts(parsed);
-          }
-        } catch (err) {}
-      }
+    const effectiveProducts = computeEffectiveProducts();
+    setProducts(effectiveProducts);
+
+    const handleSync = () => {
+      const updated = computeEffectiveProducts();
+      setProducts(updated);
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('savera-products-updated', handleCustomProductSync);
-    window.addEventListener('focus', handleFocusSync);
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('savera-products-updated', handleSync);
+    window.addEventListener('focus', handleSync);
 
-    setCart(getStoredData('savera_cart_v2', []));
+    const rawCart = getStoredData<OrderItem[]>('savera_cart_v2', []);
+    const syncedCart = rawCart.map((item) => {
+      const prod = effectiveProducts.find((p) => p.id === item.productId);
+      const variant = prod?.variants.find((v) => v.id === item.variantId);
+      return variant ? { ...item, price: variant.price } : item;
+    });
+    setCart(syncedCart);
+
     setCoupons(getStoredData('savera_coupons_v2', SEED_COUPONS));
     setSubscriptions(getStoredData('savera_subscriptions_v3', SEED_SUBSCRIPTIONS));
     setOrders(getStoredData('savera_orders_v3', SEED_ORDERS));
@@ -265,9 +285,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isHydrated.current = true;
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('savera-products-updated', handleCustomProductSync);
-      window.removeEventListener('focus', handleFocusSync);
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('savera-products-updated', handleSync);
+      window.removeEventListener('focus', handleSync);
     };
   }, []);
 
@@ -1279,78 +1299,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...newProdData,
       id: newId,
     };
-    setProducts((prev) => {
-      const updated = [newProduct, ...prev];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
-        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
-      }
-      return updated;
-    });
+    const customList = getStoredData<Product[]>('savera_custom_products_v1', []);
+    const updatedList = [newProduct, ...customList];
+    setStoredData('savera_custom_products_v1', updatedList);
+
+    const updated = computeEffectiveProducts();
+    setProducts(updated);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
+    }
     logAuditAction('Product Created', newProduct.id, `Created ${newProduct.name} by Super Admin`);
     addToast('Product Added', `${newProduct.name} has been added to the store catalog.`, 'success');
     return newProduct;
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
-    setProducts((prev) => {
-      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
-        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
-      }
-      return updated;
-    });
+    const pOverrides = getStoredData<Record<string, any>>('savera_product_overrides_v1', {});
+    pOverrides[id] = { ...(pOverrides[id] || {}), ...updates };
+    setStoredData('savera_product_overrides_v1', pOverrides);
+
+    const updated = computeEffectiveProducts();
+    setProducts(updated);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
+    }
     logAuditAction('Product Updated', id, `Updated attributes/details for product ID ${id}`);
     addToast('Product Updated', 'Product updated successfully.', 'success');
   };
 
   const updateProductPrice = (productId: string, variantId: string, newPrice: number, newMrp?: number, newStock?: number) => {
     let productName = '';
-    setProducts((prev) => {
-      const updated = prev.map((p) => {
-        if (p.id !== productId) return p;
-        productName = p.name;
-        const updatedVariants = p.variants.map((v) => {
-          if (v.id !== variantId) return v;
-          const mrp = newMrp !== undefined ? newMrp : Math.max(v.mrp, newPrice);
-          const discountPct = mrp > newPrice ? Math.round(((mrp - newPrice) / mrp) * 100) : 0;
-          return {
-            ...v,
-            price: newPrice,
-            mrp,
-            discountPct,
-            stock: newStock !== undefined && !isNaN(newStock) ? newStock : v.stock,
-          };
-        });
-        return { ...p, variants: updatedVariants };
-      });
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
-        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
-      }
-      return updated;
-    });
+    const mrp = newMrp !== undefined ? newMrp : Math.max(newPrice, newPrice);
+    const discountPct = mrp > newPrice ? Math.round(((mrp - newPrice) / mrp) * 100) : 0;
+
+    const overrides = getStoredData<Record<string, any>>('savera_variant_overrides_v1', {});
+    overrides[variantId] = {
+      price: newPrice,
+      mrp,
+      discountPct,
+      ...(newStock !== undefined && !isNaN(newStock) ? { stock: newStock } : {}),
+    };
+    setStoredData('savera_variant_overrides_v1', overrides);
+
+    const updated = computeEffectiveProducts();
+    const prod = updated.find((p) => p.id === productId);
+    productName = prod ? prod.name : productId;
+    setProducts(updated);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
+    }
     logAuditAction('Price Updated', productId, `Updated price for ${productName || productId} variant ${variantId} to ₹${newPrice}`);
     addToast('Price Updated', `Price of ${productName || 'product'} updated to ₹${newPrice}.`, 'success');
   };
 
   const deleteProduct = (id: string) => {
-    let deletedName = '';
-    setProducts((prev) => {
-      const target = prev.find((p) => p.id === id);
+    let deletedName = id;
+    const customList = getStoredData<Product[]>('savera_custom_products_v1', []);
+    if (customList.some((p) => p.id === id)) {
+      const target = customList.find((p) => p.id === id);
       deletedName = target ? target.name : id;
-      const updated = prev.filter((p) => p.id !== id);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
-        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
+      setStoredData('savera_custom_products_v1', customList.filter((p) => p.id !== id));
+    } else {
+      const target = SEED_PRODUCTS.find((p) => p.id === id);
+      deletedName = target ? target.name : id;
+      const deletedList = getStoredData<string[]>('savera_deleted_products_v1', []);
+      if (!deletedList.includes(id)) {
+        setStoredData('savera_deleted_products_v1', [...deletedList, id]);
       }
-      return updated;
-    });
+    }
+
+    const updated = computeEffectiveProducts();
+    setProducts(updated);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
+    }
     logAuditAction('Product Deleted', id, `Removed ${deletedName} from live catalog`);
     addToast('Product Removed', `${deletedName} removed from catalog.`, 'info');
   };
