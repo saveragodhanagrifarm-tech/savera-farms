@@ -27,7 +27,7 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
   const router = useRouter();
   const pathname = usePathname();
   const { cart, selectedPincode, setSelectedPincode, deliveryZones, products } = useApp();
-  const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
+  const { user, profile, isAdmin, isRider, openAuthModal, signOut } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showPincodeModal, setShowPincodeModal] = useState(false);
   const [pinInput, setPinInput] = useState(selectedPincode);
@@ -256,6 +256,11 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
                       Admin
                     </span>
                   )}
+                  {isRider && (
+                    <span className="hidden lg:inline bg-emerald-100 text-emerald-950 text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase">
+                      Rider
+                    </span>
+                  )}
                   <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
                 </button>
 
@@ -267,8 +272,8 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
                     <div className="px-3 py-2 border-b border-savera-dark/10">
                       <p className="font-bold text-xs text-savera-dark truncate">{profile?.full_name || 'Savera Customer'}</p>
                       <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
-                      <span className={`inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isAdmin ? 'bg-amber-100 text-amber-900 font-mono' : 'bg-emerald-100 text-emerald-900'}`}>
-                        {isAdmin ? '🛡️ Administrator' : '🌱 Verified Customer'}
+                      <span className={`inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded-full ${isAdmin ? 'bg-amber-100 text-amber-900 font-mono' : isRider ? 'bg-emerald-100 text-emerald-950 font-mono' : 'bg-emerald-100 text-emerald-900'}`}>
+                        {isAdmin ? '🛡️ Administrator' : isRider ? '🚚 Delivery Partner' : '🌱 Verified Customer'}
                       </span>
                     </div>
 
@@ -296,6 +301,16 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
                         <Package className="w-3.5 h-3.5 text-savera-green" />
                         <span>Order Tracking</span>
                       </Link>
+
+                      {isRider && (
+                        <Link
+                          href="/delivery"
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-emerald-50 text-emerald-900 font-bold transition border-t border-savera-dark/10 mt-1 pt-2"
+                        >
+                          <Truck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Delivery Route Portal</span>
+                        </Link>
+                      )}
 
                       {isAdmin && (
                         <Link
@@ -520,6 +535,24 @@ export const Navbar: React.FC<{ onOpenCart: () => void }> = ({ onOpenCart }) => 
             >
               📖 <span>Our Story</span>
             </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3 rounded-xl bg-savera-saffron/30 text-savera-dark font-bold flex items-center gap-2 border border-savera-saffron/40"
+              >
+                👑 <span>Admin Console</span>
+              </Link>
+            )}
+            {isRider && (
+              <Link
+                href="/delivery"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3 rounded-xl bg-emerald-100 text-emerald-950 font-bold flex items-center gap-2 border border-emerald-300"
+              >
+                🚚 <span>Rider Portal</span>
+              </Link>
+            )}
           </div>
         </div>
       )}

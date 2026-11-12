@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { Plus, AlertTriangle, Package } from 'lucide-react';
 
@@ -40,7 +41,13 @@ export default function AdminInventoryPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="font-serif text-3xl font-bold text-white">FEFO Batch Inventory</h1>
-          <p className="text-xs text-slate-400">Track batch expiry, stock levels, and production costs</p>
+          <p className="text-xs text-slate-400">
+            Track batch expiry, stock levels, and production costs. To update catalog selling prices, visit{' '}
+            <Link href="/admin/products" className="text-savera-saffron font-bold underline hover:text-amber-400">
+              Products & Pricing
+            </Link>
+            .
+          </p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}

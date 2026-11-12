@@ -149,7 +149,7 @@ export default function CheckoutPage() {
           spread: 80,
           origin: { y: 0.6 },
         });
-      } catch (e) {}
+      } catch (e) { }
       router.push(`/orders/${newOrder.id}`);
       return;
     }
@@ -170,7 +170,7 @@ export default function CheckoutPage() {
               spread: 80,
               origin: { y: 0.6 },
             });
-          } catch (e) {}
+          } catch (e) { }
           router.push(`/orders/${newOrder.id}`);
         },
         onFailure: (err) => {
@@ -189,7 +189,7 @@ export default function CheckoutPage() {
         spread: 80,
         origin: { y: 0.6 },
       });
-    } catch (e) {}
+    } catch (e) { }
 
     router.push(`/orders/${newOrder.id}`);
   };
@@ -251,11 +251,10 @@ export default function CheckoutPage() {
                   <div
                     key={addr.id}
                     onClick={() => setSelectedAddressId(addr.id)}
-                    className={`cursor-pointer p-4 rounded-2xl border transition relative ${
-                      selectedAddressId === addr.id
+                    className={`cursor-pointer p-4 rounded-2xl border transition relative ${selectedAddressId === addr.id
                         ? 'bg-savera-cream/90 border-savera-green shadow-sm ring-2 ring-savera-green/20'
                         : 'bg-savera-offwhite border-savera-dark/10 hover:border-savera-green/40'
-                    }`}
+                      }`}
                   >
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs font-bold text-savera-dark">{addr.fullName}</span>
@@ -396,11 +395,10 @@ export default function CheckoutPage() {
                   type="button"
                   key={s.slot}
                   onClick={() => setDeliverySlot(s.slot as DeliverySlot)}
-                  className={`p-4 rounded-2xl border text-left transition ${
-                    deliverySlot === s.slot
+                  className={`p-4 rounded-2xl border text-left transition ${deliverySlot === s.slot
                       ? 'bg-savera-dark text-savera-saffron border-savera-dark shadow-sm ring-2 ring-savera-saffron/30'
                       : 'bg-savera-offwhite border-savera-dark/10 text-savera-dark hover:bg-savera-cream'
-                  }`}
+                    }`}
                 >
                   <span className="text-xs font-bold block">{s.slot}</span>
                   <span className="text-[10px] font-normal opacity-80 block mt-0.5">{s.desc}</span>
@@ -445,11 +443,10 @@ export default function CheckoutPage() {
                   <div
                     key={p.id}
                     onClick={() => setPaymentMethod(p.id as any)}
-                    className={`cursor-pointer p-4 rounded-2xl border transition ${
-                      isSelected
+                    className={`cursor-pointer p-4 rounded-2xl border transition ${isSelected
                         ? 'bg-savera-cream/80 border-savera-green shadow-sm'
                         : 'bg-savera-offwhite border-savera-dark/10 text-savera-dark hover:bg-savera-cream/50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -539,11 +536,10 @@ export default function CheckoutPage() {
                               type="button"
                               key={bank}
                               onClick={() => setSelectedBank(bank)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
-                                selectedBank === bank
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border ${selectedBank === bank
                                   ? 'bg-savera-dark text-savera-saffron border-savera-dark'
                                   : 'bg-white text-savera-dark border-savera-dark/15'
-                              }`}
+                                }`}
                             >
                               {bank}
                             </button>

@@ -31,6 +31,7 @@ import {
   Boxes,
   Factory,
   MapPin,
+  Tag,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -1298,7 +1299,14 @@ export default function AdminDashboardPage() {
           <h1 className="font-serif text-3xl font-bold text-white">Business Control Dashboard</h1>
           <p className="text-xs text-slate-400">Live operational overview for Savera Farms D2C Platform</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/products"
+            className="bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition"
+          >
+            <Tag className="w-3.5 h-3.5" />
+            <span>Products & Prices</span>
+          </Link>
           <Link
             href="/admin/reports"
             className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs transition"
@@ -1361,6 +1369,30 @@ export default function AdminDashboardPage() {
             FEFO Alert: Batch expires in 2 days
           </span>
         </div>
+      </div>
+
+      {/* Super Admin Quick Actions: Products & Pricing */}
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-6 rounded-3xl border border-savera-saffron/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-savera-saffron animate-pulse" />
+            <span className="text-[10px] text-savera-saffron font-bold uppercase tracking-widest font-mono">
+              Super Admin Feature
+            </span>
+          </div>
+          <h3 className="font-serif text-xl font-bold text-white">Live Product Catalog & Dynamic Pricing</h3>
+          <p className="text-xs text-slate-400 max-w-xl">
+            Update unit prices, strike MRPs, edit product details, or add new farm products across Tricity. Real-time changes immediately sync to the customer storefront.
+          </p>
+        </div>
+        <Link
+          href="/admin/products"
+          className="bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold px-6 py-3 rounded-xl text-xs flex items-center gap-2 shadow-lg transition shrink-0"
+        >
+          <Tag className="w-4 h-4" />
+          <span>Open Pricing Engine</span>
+          <ArrowUpRight className="w-4 h-4" />
+        </Link>
       </div>
 
       {/* Tables & Alerts Section */}

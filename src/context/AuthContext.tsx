@@ -9,7 +9,7 @@ export interface UserProfile {
   email: string;
   full_name: string;
   phone?: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'admin' | 'rider';
   address?: {
     houseFlat?: string;
     street?: string;
@@ -20,15 +20,56 @@ export interface UserProfile {
   wallet_balance?: number;
   reward_points?: number;
   created_at?: string;
+  assignedRoute?: string;
 }
+
+export const PRESET_ACCOUNTS = [
+  {
+    id: 'usr-admin-1',
+    email: 'admin@saverafarms.com',
+    password: 'SaveraAdmin2026!',
+    full_name: 'Arin Garg (Super Admin)',
+    phone: '+91 98765 43210',
+    role: 'admin' as const,
+    assignedRoute: 'All Panchkula & Chandigarh Hubs',
+  },
+  {
+    id: 'usr-admin-2',
+    email: 'operations@saverafarms.com',
+    password: 'SaveraAdmin2026!',
+    full_name: 'Panchkula Operations Admin',
+    phone: '+91 98765 43211',
+    role: 'admin' as const,
+    assignedRoute: 'Panchkula Sector 19 Cold Depot',
+  },
+  {
+    id: 'usr-rider-1',
+    email: 'rider.ramesh@saverafarms.com',
+    password: 'SaveraRider2026!',
+    full_name: 'Ramesh Kumar',
+    phone: '+91 98111 22334',
+    role: 'rider' as const,
+    assignedRoute: 'Panchkula Sectors 1–15 & MDC (134109 / 134113)',
+  },
+  {
+    id: 'usr-rider-2',
+    email: 'rider.gurpreet@saverafarms.com',
+    password: 'SaveraRider2026!',
+    full_name: 'Gurpreet Singh',
+    phone: '+91 98222 33445',
+    role: 'rider' as const,
+    assignedRoute: 'Chandigarh Sectors 17, 18, 22 & 35 (160017 / 160022)',
+  },
+];
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   isAdmin: boolean;
+  isRider: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; profile?: UserProfile | null }>;
-  signUp: (email: string, password: string, fullName: string, phone?: string, role?: 'customer' | 'admin') => Promise<{ error: Error | null; user?: User | null }>;
+  signUp: (email: string, password: string, fullName: string, phone?: string, role?: 'customer' | 'rider') => Promise<{ error: Error | null; user?: User | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -56,26 +97,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (data && !error) {
-        setProfile(data as UserProfile);
-        return data as UserProfile;
+        // Enforce: only authorized pre-approved emails can hold 'admin' role
+        const email = data.email?.toLowerCase() || '';
+        const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com';
+        const role: 'customer' | 'admin' | 'rider' = (data.role === 'admin' && isAuthorizedAdmin)
+          ? 'admin'
+          : (data.role === 'rider' ? 'rider' : 'customer');
+        const resolvedProfile: UserProfile = { ...data, role };
+        setProfile(resolvedProfile);
+        return resolvedProfile;
       }
 
-      // Fallback if table doesn't have row yet (read from metadata)
+      // Fallback from metadata with whitelist check
+      const email = userEmail?.toLowerCase() || '';
+      const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com';
+      const role: 'customer' | 'admin' | 'rider' = isAuthorizedAdmin && metadata?.role === 'admin' 
+        ? 'admin' 
+        : (metadata?.role === 'rider' ? 'rider' : 'customer');
+
       const fallbackProfile: UserProfile = {
         id: userId,
         email: userEmail || '',
         full_name: metadata?.full_name || userEmail?.split('@')[0] || 'User',
         phone: metadata?.phone || '',
-        role: (metadata?.role === 'admin' ? 'admin' : 'customer'),
+        role,
       };
       setProfile(fallbackProfile);
       return fallbackProfile;
     } catch (err) {
+      const email = userEmail?.toLowerCase() || '';
+      const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com';
       const fallbackProfile: UserProfile = {
         id: userId,
         email: userEmail || '',
         full_name: userEmail?.split('@')[0] || 'User',
-        role: (metadata?.role === 'admin' ? 'admin' : 'customer'),
+        role: isAuthorizedAdmin ? 'admin' : 'customer',
       };
       setProfile(fallbackProfile);
       return fallbackProfile;
@@ -83,7 +139,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // 1. Initial Session Check
+    // 0. Check preset auth stored in localStorage
+    if (typeof window !== 'undefined') {
+      const savedPreset = localStorage.getItem('savera_preset_auth');
+      if (savedPreset) {
+        try {
+          const parsed = JSON.parse(savedPreset);
+          if (parsed?.user && parsed?.profile) {
+            setUser(parsed.user);
+            setProfile(parsed.profile);
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {}
+      }
+    }
+
+    // 1. Initial Supabase Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
@@ -99,6 +171,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 2. Auth State Change Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // If preset auth is active, do not overwrite
+      if (typeof window !== 'undefined' && localStorage.getItem('savera_preset_auth')) {
+        return;
+      }
       if (session?.user) {
         setUser(session.user);
         await fetchProfile(session.user.id, session.user.email, session.user.user_metadata);
@@ -116,6 +192,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check preset accounts (Admin 1, Admin 2, Rider 1, Rider 2)
+    const preset = PRESET_ACCOUNTS.find((a) => a.email.toLowerCase() === normalizedEmail);
+    if (preset) {
+      if (preset.password !== password) {
+        setIsLoading(false);
+        return { error: new Error('Incorrect password for this authorized account.') };
+      }
+
+      const presetUser = {
+        id: preset.id,
+        email: preset.email,
+        app_metadata: {},
+        user_metadata: { full_name: preset.full_name, phone: preset.phone, role: preset.role },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as unknown as User;
+
+      const presetProfile: UserProfile = {
+        id: preset.id,
+        email: preset.email,
+        full_name: preset.full_name,
+        phone: preset.phone,
+        role: preset.role,
+        assignedRoute: preset.assignedRoute,
+        wallet_balance: preset.role === 'admin' ? 50000 : 0,
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_preset_auth', JSON.stringify({ user: presetUser, profile: presetProfile }));
+      }
+
+      setUser(presetUser);
+      setProfile(presetProfile);
+      setIsLoading(false);
+      setShowAuthModal(false);
+      return { error: null, profile: presetProfile };
+    }
+
+    // Standard Supabase login
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -141,9 +258,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     fullName: string,
     phone?: string,
-    role: 'customer' | 'admin' = 'customer'
+    requestedRole: 'customer' | 'rider' = 'customer'
   ) => {
     setIsLoading(true);
+    // Security check: Super Admin accounts can NEVER be created via public signup
+    const sanitizedRole: 'customer' | 'rider' = requestedRole === 'rider' ? 'rider' : 'customer';
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -151,7 +271,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: fullName,
           phone: phone || '',
-          role: role,
+          role: sanitizedRole,
         },
       },
     });
@@ -163,7 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.user) {
       setUser(data.user);
-      await fetchProfile(data.user.id, data.user.email, { full_name: fullName, phone, role });
+      await fetchProfile(data.user.id, data.user.email, { full_name: fullName, phone, role: sanitizedRole });
     }
     setIsLoading(false);
     setShowAuthModal(false);
@@ -187,6 +307,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('savera_preset_auth');
+    }
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
@@ -208,6 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isAdmin = profile?.role === 'admin';
+  const isRider = profile?.role === 'rider';
 
   return (
     <AuthContext.Provider
@@ -215,6 +339,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         isAdmin,
+        isRider,
         isLoading,
         signIn,
         signUp,

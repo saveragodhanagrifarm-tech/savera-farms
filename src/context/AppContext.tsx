@@ -98,6 +98,10 @@ interface AppContextType {
   adminRole: AdminRole;
   setAdminRole: (role: AdminRole) => void;
   products: Product[];
+  addProduct: (product: Omit<Product, 'id'> | Product) => Product;
+  updateProduct: (id: string, updates: Partial<Product>) => void;
+  updateProductPrice: (productId: string, variantId: string, newPrice: number, newMrp?: number) => void;
+  deleteProduct: (id: string) => void;
   batches: BatchItem[];
   addBatch: (batch: Omit<BatchItem, 'id' | 'quantitySold' | 'status'>) => void;
   productionLogs: ProductionRecord[];
@@ -763,6 +767,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {}
   };
 
+  // Products & Pricing Management (Super Admin)
+  const addProduct = (newProdData: Omit<Product, 'id'> | Product) => {
+    const newId = 'id' in newProdData && newProdData.id ? newProdData.id : `prod-${Date.now()}`;
+    const newProduct: Product = {
+      ...newProdData,
+      id: newId,
+    };
+    setProducts((prev) => {
+      const updated = [newProduct, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    logAuditAction('Product Created', newProduct.id, `Created ${newProduct.name} by Super Admin`);
+    addToast('Product Added', `${newProduct.name} has been added to the store catalog.`, 'success');
+    return newProduct;
+  };
+
+  const updateProduct = (id: string, updates: Partial<Product>) => {
+    setProducts((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    logAuditAction('Product Updated', id, `Updated attributes/details for product ID ${id}`);
+    addToast('Product Updated', 'Product updated successfully.', 'success');
+  };
+
+  const updateProductPrice = (productId: string, variantId: string, newPrice: number, newMrp?: number) => {
+    let productName = '';
+    setProducts((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id !== productId) return p;
+        productName = p.name;
+        const updatedVariants = p.variants.map((v) => {
+          if (v.id !== variantId) return v;
+          const mrp = newMrp !== undefined ? newMrp : Math.max(v.mrp, newPrice);
+          const discountPct = mrp > newPrice ? Math.round(((mrp - newPrice) / mrp) * 100) : 0;
+          return {
+            ...v,
+            price: newPrice,
+            mrp,
+            discountPct,
+          };
+        });
+        return { ...p, variants: updatedVariants };
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    logAuditAction('Price Updated', productId, `Updated price for ${productName || productId} variant ${variantId} to ₹${newPrice}`);
+    addToast('Price Updated', `Price of ${productName || 'product'} updated to ₹${newPrice}.`, 'success');
+  };
+
+  const deleteProduct = (id: string) => {
+    let deletedName = '';
+    setProducts((prev) => {
+      const target = prev.find((p) => p.id === id);
+      deletedName = target ? target.name : id;
+      const updated = prev.filter((p) => p.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    logAuditAction('Product Deleted', id, `Removed ${deletedName} from live catalog`);
+    addToast('Product Removed', `${deletedName} removed from catalog.`, 'info');
+  };
+
   // Batches & Production
   const addBatch = (batchData: Omit<BatchItem, 'id' | 'quantitySold' | 'status'>) => {
     const newBatch: BatchItem = {
@@ -952,6 +1030,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adminRole,
         setAdminRole,
         products,
+        addProduct,
+        updateProduct,
+        updateProductPrice,
+        deleteProduct,
         batches,
         addBatch,
         productionLogs,

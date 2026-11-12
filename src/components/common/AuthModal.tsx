@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useAuth, PRESET_ACCOUNTS } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
-import { X, Mail, Lock, User, Phone, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { X, Mail, Lock, User, Phone, ShieldCheck, ArrowRight, Sparkles, Truck, ShieldAlert } from 'lucide-react';
 
 export function AuthModal() {
+  const router = useRouter();
   const { showAuthModal, authModalMode, closeAuthModal, openAuthModal, signIn, signUp, signInWithGoogle } = useAuth();
   const { addToast } = useApp();
 
@@ -13,11 +15,18 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<'customer' | 'admin'>('customer');
+  const [role, setRole] = useState<'customer' | 'rider'>('customer');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
 
   if (!showAuthModal) return null;
+
+  const handleFillPreset = (preset: typeof PRESET_ACCOUNTS[0]) => {
+    setEmail(preset.email);
+    setPassword(preset.password);
+    setErrorMsg('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +40,22 @@ export function AuthModal() {
           setErrorMsg(error.message);
           addToast('Login Failed', error.message, 'error');
         } else {
+          const roleLabel = profile?.role === 'admin' ? 'Super Admin' : profile?.role === 'rider' ? 'Delivery Partner' : 'Customer';
           addToast(
             'Welcome Back!',
-            `Logged in as ${profile?.full_name || email} (${profile?.role === 'admin' ? 'Admin' : 'Customer'})`,
+            `Logged in as ${profile?.full_name || email} (${roleLabel})`,
             'success'
           );
           closeAuthModal();
+
+          if (profile?.role === 'rider') {
+            router.push('/delivery');
+          } else if (profile?.role === 'admin') {
+            router.push('/admin');
+          }
         }
       } else {
+        // Enforce: role is strictly 'customer' or 'rider'. Never 'admin'.
         const { error, user } = await signUp(email, password, fullName, phone, role);
         if (error) {
           setErrorMsg(error.message);
@@ -46,10 +63,15 @@ export function AuthModal() {
         } else {
           addToast(
             'Account Created!',
-            'Your account is ready. Please check your email if confirmation is required.',
+            role === 'rider'
+              ? 'Delivery Partner account registered! You can now access your delivery portal.'
+              : 'Your customer account is ready. Welcome to Savera Farms!',
             'success'
           );
           closeAuthModal();
+          if (role === 'rider') {
+            router.push('/delivery');
+          }
         }
       }
     } catch (err: any) {
@@ -100,8 +122,8 @@ export function AuthModal() {
             </h2>
             <p className="text-xs text-savera-brown mt-1">
               {authModalMode === 'login'
-                ? 'Access your daily milk subscriptions, orders, and addresses.'
-                : 'Join Savera Farms for fresh farm deliveries at your doorstep.'}
+                ? 'Access your daily milk subscriptions, orders, addresses, or partner console.'
+                : 'Join Savera Farms for fresh farm deliveries across Chandigarh & Panchkula.'}
             </p>
           </div>
 
@@ -110,6 +132,60 @@ export function AuthModal() {
               {errorMsg}
             </div>
           )}
+
+          {/* Preset Accounts Direct-Fill (Admins & Delivery Riders) */}
+          <div className="bg-savera-offwhite border border-savera-dark/10 rounded-2xl p-3 text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-savera-dark flex items-center gap-1.5 text-[11px]">
+                <ShieldCheck className="w-3.5 h-3.5 text-savera-green" />
+                <span>Authorized Team Sign-In</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDemoAccounts(!showDemoAccounts)}
+                className="text-[10px] text-savera-green font-bold hover:underline"
+              >
+                {showDemoAccounts ? 'Hide' : 'Select Credentials'}
+              </button>
+            </div>
+
+            {showDemoAccounts && (
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[0])}
+                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
+                >
+                  <span className="text-[10px] font-bold text-savera-dark block truncate">👑 Super Admin (Arin)</span>
+                  <span className="text-[9px] text-gray-500 block">admin@saverafarms.com</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[1])}
+                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
+                >
+                  <span className="text-[10px] font-bold text-savera-dark block truncate">⚙️ Operations Admin</span>
+                  <span className="text-[9px] text-gray-500 block">operations@saverafarms.com</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[2])}
+                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
+                >
+                  <span className="text-[10px] font-bold text-savera-dark block truncate">🚚 Rider 1 (Ramesh)</span>
+                  <span className="text-[9px] text-gray-500 block">Panchkula Sec 1-15</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[3])}
+                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
+                >
+                  <span className="text-[10px] font-bold text-savera-dark block truncate">🚚 Rider 2 (Gurpreet)</span>
+                  <span className="text-[9px] text-gray-500 block">Chandigarh Sec 17-35</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Social Sign In (Google) */}
           <button
@@ -180,30 +256,38 @@ export function AuthModal() {
                   </div>
                 </div>
 
+                {/* Account Type (Strictly Customer or Rider - Admin is never self-assignable) */}
                 <div>
-                  <label className="text-savera-dark font-bold block mb-1">Account Role</label>
+                  <label className="text-savera-dark font-bold block mb-1">Account Type</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setRole('customer')}
-                      className={`p-2.5 rounded-xl border font-bold text-center transition ${role === 'customer'
-                          ? 'bg-savera-green text-white border-savera-green'
+                      className={`p-2.5 rounded-xl border font-bold text-center transition ${
+                        role === 'customer'
+                          ? 'bg-savera-green text-white border-savera-green shadow-sm'
                           : 'bg-savera-offwhite text-savera-dark border-savera-dark/15'
-                        }`}
+                      }`}
                     >
                       Customer
                     </button>
                     <button
                       type="button"
-                      onClick={() => setRole('admin')}
-                      className={`p-2.5 rounded-xl border font-bold text-center transition ${role === 'admin'
-                          ? 'bg-savera-dark text-savera-saffron border-savera-dark'
+                      onClick={() => setRole('rider')}
+                      className={`p-2.5 rounded-xl border font-bold text-center transition ${
+                        role === 'rider'
+                          ? 'bg-savera-dark text-savera-saffron border-savera-dark shadow-sm'
                           : 'bg-savera-offwhite text-savera-dark border-savera-dark/15'
-                        }`}
+                      }`}
                     >
-                      Admin / Staff
+                      Delivery Partner
                     </button>
                   </div>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    {role === 'customer'
+                      ? 'For ordering daily milk and farm-fresh organic staples.'
+                      : 'For assigned delivery drivers with field route tracking.'}
+                  </p>
                 </div>
               </>
             )}
