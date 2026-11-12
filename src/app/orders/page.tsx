@@ -34,18 +34,48 @@ export default function CustomerOrdersPage() {
     );
   }
 
+  const userEmail = (user?.email || profile?.email || '').toLowerCase().trim();
+  const userName = (profile?.full_name || user?.email?.split('@')[0] || '').toLowerCase().trim();
+  const userPhoneClean = (profile?.phone || '').replace(/[^0-9]/g, '');
+
   const myOrders = orders.filter((o) => {
     if (isAdmin) return true;
-    if (user) {
-      return (
-        o.customerId === user.id ||
-        o.customerId === user.email ||
-        (profile?.full_name && o.customerName === profile.full_name) ||
-        (user.email && o.customerName === user.email.split('@')[0])
-      );
+    if (!user) return false;
+
+    // 1. Direct user id match
+    if (o.customerId === user.id) return true;
+
+    // 2. Email matching
+    if (userEmail) {
+      if (o.customerId && o.customerId.toLowerCase().trim() === userEmail) return true;
+      if (o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail) return true;
     }
+
+    // 3. Name matching
+    const oName = (o.customerName || '').toLowerCase().trim();
+    if (userName && oName && (oName === userName || oName.includes(userName) || userName.includes(oName))) {
+      return true;
+    }
+
+    // 4. Phone number matching (comparing trailing 10 digits)
+    const oPhoneClean = (o.customerPhone || '').replace(/[^0-9]/g, '');
+    if (userPhoneClean && oPhoneClean && userPhoneClean.length >= 10 && oPhoneClean.length >= 10) {
+      if (userPhoneClean.slice(-10) === oPhoneClean.slice(-10)) return true;
+    }
+
     return false;
   });
+
+  const activeCount = myOrders.filter((o) => o.status !== 'Delivered' && o.status !== 'Cancelled').length;
+  const deliveredCount = myOrders.filter((o) => o.status === 'Delivered').length;
+  const cancelledCount = myOrders.filter((o) => o.status === 'Cancelled').length;
+
+  const getTabCount = (tab: 'All' | 'Active' | 'Delivered' | 'Cancelled') => {
+    if (tab === 'All') return myOrders.length;
+    if (tab === 'Active') return activeCount;
+    if (tab === 'Delivered') return deliveredCount;
+    return cancelledCount;
+  };
 
   const filteredOrders = myOrders.filter((o) => {
     if (filterTab === 'All') return true;
@@ -88,12 +118,12 @@ export default function CustomerOrdersPage() {
           <button
             key={tab}
             onClick={() => setFilterTab(tab)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${filterTab === tab
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${filterTab === tab
                 ? 'bg-savera-dark text-savera-saffron shadow-sm'
                 : 'bg-white text-savera-dark hover:bg-savera-cream border border-savera-dark/10'
               }`}
           >
-            {tab} {tab === 'All' ? `(${orders.length})` : ''}
+            {tab} ({getTabCount(tab)})
           </button>
         ))}
       </div>

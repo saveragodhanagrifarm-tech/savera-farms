@@ -117,6 +117,7 @@ export interface Order {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   items: OrderItem[];
   subtotal: number;
   deliveryFee: number;

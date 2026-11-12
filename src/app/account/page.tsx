@@ -159,20 +159,32 @@ export default function CustomerAccountPage() {
   const activeWallet = typeof profile?.wallet_balance === 'number' ? profile.wallet_balance : customer.walletBalance;
 
   // Filter orders and subscriptions belonging ONLY to this customer
-  const userOrders = orders.filter(
-    (o) =>
-      o.customerId === user.id ||
-      o.customerName.toLowerCase() === activeName.toLowerCase() ||
-      (activePhone && o.customerPhone === activePhone) ||
-      (user.email && o.customerPhone === user.email)
-  );
+  const normEmail = (user.email || activeEmail || '').toLowerCase().trim();
+  const normName = activeName.toLowerCase().trim();
+  const normPhone = activePhone.replace(/[^0-9]/g, '');
 
-  const userSubscriptions = subscriptions.filter(
-    (s) =>
-      s.customerId === user.id ||
-      s.customerName.toLowerCase() === activeName.toLowerCase() ||
-      (activePhone && s.customerPhone === activePhone)
-  );
+  const userOrders = orders.filter((o) => {
+    if (o.customerId === user.id) return true;
+    if (normEmail) {
+      if (o.customerId && o.customerId.toLowerCase().trim() === normEmail) return true;
+      if (o.customerEmail && o.customerEmail.toLowerCase().trim() === normEmail) return true;
+    }
+    const oName = (o.customerName || '').toLowerCase().trim();
+    if (normName && oName && (oName === normName || oName.includes(normName) || normName.includes(oName))) return true;
+    const oPhone = (o.customerPhone || '').replace(/[^0-9]/g, '');
+    if (normPhone && oPhone && normPhone.length >= 10 && oPhone.length >= 10 && normPhone.slice(-10) === oPhone.slice(-10)) return true;
+    return false;
+  });
+
+  const userSubscriptions = subscriptions.filter((s) => {
+    if (s.customerId === user.id) return true;
+    if (normEmail && s.customerId && s.customerId.toLowerCase().trim() === normEmail) return true;
+    const sName = (s.customerName || '').toLowerCase().trim();
+    if (normName && sName && (sName === normName || sName.includes(normName) || normName.includes(sName))) return true;
+    const sPhone = (s.customerPhone || '').replace(/[^0-9]/g, '');
+    if (normPhone && sPhone && normPhone.length >= 10 && sPhone.length >= 10 && normPhone.slice(-10) === sPhone.slice(-10)) return true;
+    return false;
+  });
 
   const copyReferralCode = () => {
     navigator.clipboard.writeText(customer.referralCode);

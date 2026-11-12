@@ -227,6 +227,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const initialWallet = typeof profile?.wallet_balance === 'number' ? profile.wallet_balance : 0;
       const storedWallet = getStoredData<number>(userWalletKey, initialWallet);
 
+      // Load existing local orders and merge with user-specific stored orders
+      const userOrdersKey = `savera_user_orders_${user.id}`;
+      const localUserOrders = getStoredData<Order[]>(userOrdersKey, []);
+      const platformOrders = getStoredData<Order[]>('savera_orders_v3', []);
+
+      const initialOrderMap = new Map<string, Order>();
+      platformOrders.forEach((o) => initialOrderMap.set(o.orderNumber || o.id, o));
+      localUserOrders.forEach((o) => initialOrderMap.set(o.orderNumber || o.id, o));
+      const combinedInitialOrders = Array.from(initialOrderMap.values());
+      if (combinedInitialOrders.length > 0) {
+        setOrders(combinedInitialOrders);
+      }
+
+      // Load existing local subscriptions
+      const userSubsKey = `savera_user_subs_${user.id}`;
+      const localUserSubs = getStoredData<MilkSubscription[]>(userSubsKey, []);
+      const platformSubs = getStoredData<MilkSubscription[]>('savera_subscriptions_v3', []);
+      const initialSubMap = new Map<string, MilkSubscription>();
+      platformSubs.forEach((s) => initialSubMap.set(s.id, s));
+      localUserSubs.forEach((s) => initialSubMap.set(s.id, s));
+      const combinedInitialSubs = Array.from(initialSubMap.values());
+      if (combinedInitialSubs.length > 0) {
+        setSubscriptions(combinedInitialSubs);
+      }
+
       setCustomer((prev) => ({
         id: user.id,
         fullName: realName,
@@ -235,12 +260,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         walletBalance: storedWallet,
         rewardPoints: typeof profile?.reward_points === 'number' ? profile.reward_points : 50,
         referralCode: dynamicReferral,
-        totalOrders: prev.totalOrders,
+        totalOrders: combinedInitialOrders.filter(o => o.customerId === user.id || (o.customerEmail && o.customerEmail.toLowerCase() === realEmail.toLowerCase())).length || prev.totalOrders,
         totalSpent: prev.totalSpent,
         addresses: userAddresses,
       }));
 
-      // Fetch user-specific orders from Supabase
+      // Fetch user-specific orders from Supabase (MERGE rather than replace)
       supabase
         .from('orders')
         .select('*')
@@ -248,12 +273,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (data && !error) {
-            const userOrders: Order[] = data.map((d: any) => ({
+            const fetchedUserOrders: Order[] = data.map((d: any) => ({
               id: d.id,
               orderNumber: d.order_number,
               customerId: d.user_id || user.id,
               customerName: d.customer_name || realName,
               customerPhone: d.customer_phone || realPhone,
+              customerEmail: realEmail,
               items: d.items || [],
               subtotal: Number(d.subtotal) || 0,
               deliveryFee: Number(d.delivery_fee) || 0,
@@ -272,16 +298,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               createdAt: d.created_at || new Date().toISOString(),
               updatedAt: d.created_at || new Date().toISOString(),
             }));
-            setOrders(userOrders);
+
+            // Safely merge Supabase orders with existing local orders
+            setOrders((prevOrders) => {
+              const orderMap = new Map<string, Order>();
+              prevOrders.forEach((o) => orderMap.set(o.orderNumber || o.id, o));
+              localUserOrders.forEach((o) => {
+                const key = o.orderNumber || o.id;
+                if (!orderMap.has(key)) orderMap.set(key, o);
+              });
+              fetchedUserOrders.forEach((o) => {
+                const key = o.orderNumber || o.id;
+                if (orderMap.has(key)) {
+                  orderMap.set(key, { ...orderMap.get(key)!, ...o });
+                } else {
+                  orderMap.set(key, o);
+                }
+              });
+              const merged = Array.from(orderMap.values());
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('savera_orders_v3', JSON.stringify(merged));
+                localStorage.setItem(userOrdersKey, JSON.stringify(merged.filter(o => o.customerId === user.id || o.customerEmail?.toLowerCase() === realEmail.toLowerCase())));
+              }
+              return merged;
+            });
+
             setCustomer((c) => ({
               ...c,
-              totalOrders: userOrders.length,
-              totalSpent: userOrders.reduce((sum, o) => sum + (o.paymentStatus === 'Paid' ? o.totalAmount : 0), 0),
+              totalOrders: fetchedUserOrders.length || c.totalOrders,
+              totalSpent: fetchedUserOrders.reduce((sum, o) => sum + (o.paymentStatus === 'Paid' ? o.totalAmount : 0), 0) || c.totalSpent,
             }));
           }
         });
 
-      // Fetch user-specific subscriptions from Supabase
+      // Fetch user-specific subscriptions from Supabase (MERGE rather than replace)
       supabase
         .from('subscriptions')
         .select('*')
@@ -289,7 +339,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (data && !error) {
-            const userSubs: MilkSubscription[] = data.map((d: any) => ({
+            const fetchedUserSubs: MilkSubscription[] = data.map((d: any) => ({
               id: d.id,
               customerId: d.user_id || user.id,
               customerName: d.customer_name || realName,
@@ -310,7 +360,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
               monthlyEstimate: Number(d.monthly_cost) || 2850,
             }));
-            setSubscriptions(userSubs);
+
+            setSubscriptions((prevSubs) => {
+              const subMap = new Map<string, MilkSubscription>();
+              prevSubs.forEach((s) => subMap.set(s.id, s));
+              localUserSubs.forEach((s) => {
+                if (!subMap.has(s.id)) subMap.set(s.id, s);
+              });
+              fetchedUserSubs.forEach((s) => {
+                if (subMap.has(s.id)) {
+                  subMap.set(s.id, { ...subMap.get(s.id)!, ...s });
+                } else {
+                  subMap.set(s.id, s);
+                }
+              });
+              const merged = Array.from(subMap.values());
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('savera_subscriptions_v3', JSON.stringify(merged));
+                localStorage.setItem(userSubsKey, JSON.stringify(merged.filter(s => s.customerId === user.id)));
+              }
+              return merged;
+            });
           }
         });
     } else {
@@ -326,8 +396,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         totalSpent: 0,
         addresses: [],
       });
-      setOrders([]);
-      setSubscriptions([]);
+      // CRITICAL: Do NOT wipe orders or subscriptions to []!
+      // During initial page load or reloads, user is null for several milliseconds before
+      // Supabase getSession() returns. Wiping here wipes localStorage permanently.
     }
   }, [user, profile]);
 
@@ -671,28 +742,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addSubscription = (
     subData: Omit<MilkSubscription, 'id' | 'startDate' | 'status' | 'skippedDates' | 'nextDeliveryDate'>
   ) => {
+    const resolvedCustomerId = user?.id || customer.id || 'cust-user';
+    const resolvedCustomerName = subData.customerName || profile?.full_name || customer.fullName || 'Customer';
+    const resolvedCustomerPhone = subData.customerPhone || profile?.phone || customer.phone || '';
+
     const newSub: MilkSubscription = {
       ...subData,
+      customerId: resolvedCustomerId,
+      customerName: resolvedCustomerName,
+      customerPhone: resolvedCustomerPhone,
       id: 'SUB-' + Math.floor(1000 + Math.random() * 9000),
       startDate: new Date().toISOString().split('T')[0],
       status: 'Active',
       skippedDates: [],
       nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     };
-    setSubscriptions((prev) => [newSub, ...prev]);
+
+    setSubscriptions((prev) => {
+      const updated = [newSub, ...prev.filter((s) => s.id !== newSub.id)];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_subscriptions_v3', JSON.stringify(updated));
+        if (user?.id) {
+          localStorage.setItem(`savera_user_subs_${user.id}`, JSON.stringify(updated));
+        }
+      }
+      return updated;
+    });
+
     addToast('Milk Subscription Activated!', `Your ${newSub.frequency} delivery is scheduled starting tomorrow.`, 'success');
     logAuditAction('New Subscription', newSub.id, `Created subscription for ${newSub.productName}`);
 
     // Asynchronously sync to Supabase
     try {
+      const isValidUUID = (str?: string | null) => !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
       supabase.auth.getSession().then(({ data: { session } }) => {
-        const userId = session?.user?.id || null;
+        const rawUserId = session?.user?.id || user?.id || null;
+        const validDbUserId = isValidUUID(rawUserId) ? rawUserId : null;
         supabase.from('subscriptions').insert({
           id: newSub.id,
-          user_id: userId,
-          customer_name: customer.fullName,
-          customer_phone: customer.phone,
-          delivery_address: customer.addresses[0] || {},
+          user_id: validDbUserId,
+          customer_name: newSub.customerName,
+          customer_phone: newSub.customerPhone,
+          delivery_address: newSub.deliveryAddress || customer.addresses[0] || {},
           product_id: newSub.productId,
           product_name: newSub.productName,
           variant_id: newSub.variantId,
@@ -787,16 +878,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deliveryDateObj.setDate(deliveryDateObj.getDate() + daysToAdd);
     const calculatedDeliveryDate = deliveryDateObj.toISOString().split('T')[0];
 
-    const isChandigarh = deliveryAddress.city.toLowerCase().includes('chandigarh') || deliveryAddress.pincode.startsWith('16');
+    const isChandigarh = (deliveryAddress.city || '').toLowerCase().includes('chandigarh') || (deliveryAddress.pincode || '').startsWith('16');
     const assignedDriverName = isChandigarh ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)';
     const assignedDriverPhone = isChandigarh ? '+91 98222 33445' : '+91 98111 22334';
+
+    const resolvedCustomerId = user?.id || customer.id || 'cust-user';
+    const resolvedCustomerEmail = user?.email || profile?.email || customer.email || '';
+    const resolvedCustomerName = deliveryAddress.fullName || profile?.full_name || customer.fullName || (user?.email ? user.email.split('@')[0] : 'Customer');
+    const resolvedCustomerPhone = deliveryAddress.mobileNumber || profile?.phone || customer.phone || '';
 
     const newOrder: Order = {
       id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
       orderNumber: 'SAV-' + Math.floor(10000 + Math.random() * 90000),
-      customerId: user?.id || customer.id,
-      customerName: deliveryAddress.fullName || profile?.full_name || customer.fullName,
-      customerPhone: deliveryAddress.mobileNumber || profile?.phone || customer.phone,
+      customerId: resolvedCustomerId,
+      customerEmail: resolvedCustomerEmail,
+      customerName: resolvedCustomerName,
+      customerPhone: resolvedCustomerPhone,
       items: [...cart],
       subtotal: cartSubtotal,
       deliveryFee,
@@ -817,14 +914,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: new Date().toISOString(),
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    setOrders((prev) => {
+      const updated = [newOrder, ...prev.filter((o) => o.id !== newOrder.id && o.orderNumber !== newOrder.orderNumber)];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_orders_v3', JSON.stringify(updated));
+        if (user?.id) {
+          localStorage.setItem(`savera_user_orders_${user.id}`, JSON.stringify(updated.filter(o => o.customerId === user.id || (o.customerEmail && o.customerEmail.toLowerCase() === resolvedCustomerEmail.toLowerCase()))));
+        }
+        if (resolvedCustomerEmail) {
+          localStorage.setItem(`savera_user_orders_${resolvedCustomerEmail.toLowerCase()}`, JSON.stringify(updated));
+        }
+      }
+      return updated;
+    });
 
     // If paid via wallet, add debit transaction record
     if (paymentMethod === 'Wallets') {
       const remainingBal = Math.max(0, customer.walletBalance - cartTotal);
       const tx: WalletTransaction = {
         id: 'tx-' + Date.now(),
-        customerId: user?.id || customer.id,
+        customerId: resolvedCustomerId,
         type: 'Debit',
         amount: cartTotal,
         balanceAfter: remainingBal,
@@ -862,18 +971,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Order Placed Successfully!', confirmMsg, 'success');
     logAuditAction('New Order Placed', newOrder.orderNumber, `Order placed for ₹${cartTotal}`);
 
-    // Asynchronously sync to Supabase database
+    // Asynchronously sync to Supabase database (validating UUID foreign key)
     try {
+      const isValidUUID = (str?: string | null) => !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
       supabase.auth.getSession().then(({ data: { session } }) => {
-        const userId = session?.user?.id || null;
+        const rawUserId = session?.user?.id || user?.id || null;
+        const validDbUserId = isValidUUID(rawUserId) ? rawUserId : null;
         supabase.from('orders').insert({
           id: newOrder.id,
           order_number: newOrder.orderNumber,
-          user_id: userId,
+          user_id: validDbUserId,
           customer_name: newOrder.customerName,
           customer_phone: newOrder.customerPhone,
-          delivery_address: newOrder.deliveryAddress,
-          items: newOrder.items,
+          delivery_address: newOrder.deliveryAddress || {},
+          items: newOrder.items || [],
           subtotal: newOrder.subtotal,
           discount: newOrder.discount,
           delivery_fee: newOrder.deliveryFee,
