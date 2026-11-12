@@ -334,18 +334,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSubscriptions(combinedInitialSubs);
       }
 
-      setCustomer((prev) => ({
-        id: user.id,
-        fullName: realName,
-        email: realEmail,
-        phone: realPhone || prev.phone,
-        walletBalance: storedWallet,
-        rewardPoints: typeof profile?.reward_points === 'number' ? profile.reward_points : 50,
-        referralCode: dynamicReferral,
-        totalOrders: combinedInitialOrders.filter(o => o.customerId === user.id || (o.customerEmail && o.customerEmail.toLowerCase() === realEmail.toLowerCase())).length || prev.totalOrders,
-        totalSpent: prev.totalSpent,
-        addresses: userAddresses,
-      }));
+      setCustomer((prev) => {
+        const effectiveAddresses = userAddresses.length > 0 ? userAddresses : prev.addresses;
+        if (userAddresses.length === 0 && prev.addresses.length > 0 && typeof window !== 'undefined') {
+          localStorage.setItem(`savera_user_addresses_${user.id}`, JSON.stringify(prev.addresses));
+        }
+
+        return {
+          id: user.id,
+          fullName: realName,
+          email: realEmail,
+          phone: realPhone || prev.phone,
+          walletBalance: storedWallet,
+          rewardPoints: typeof profile?.reward_points === 'number' ? profile.reward_points : 50,
+          referralCode: dynamicReferral,
+          totalOrders: combinedInitialOrders.filter(o => o.customerId === user.id || (o.customerEmail && o.customerEmail.toLowerCase() === realEmail.toLowerCase())).length || prev.totalOrders,
+          totalSpent: prev.totalSpent,
+          addresses: effectiveAddresses,
+        };
+      });
 
       const isTeamAdmin = profile?.role === 'admin' || user.email === 'admin@saverafarms.com' || user.email === 'operations@saverafarms.com' || user.email === 'manager@saverafarms.com';
       const isTeamRider = profile?.role === 'rider' || (user.email && user.email.includes('rider'));
@@ -381,8 +388,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               deliveryDate: d.delivery_date || '',
               deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
               status: (d.status as any) || 'Order Placed',
-              driverName: d.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
-              driverPhone: d.driver_phone || '+91 98112 33445',
+              driverName: d.driver_name || d.delivery_address?.driver_name || ((d.delivery_address?.pincode || '').startsWith('16') ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)'),
+              driverPhone: d.driver_phone || d.delivery_address?.driver_phone || ((d.delivery_address?.pincode || '').startsWith('16') ? '+91 98222 33445' : '+91 98111 22334'),
               otp: d.otp || '4821',
               createdAt: d.created_at || new Date().toISOString(),
               updatedAt: d.created_at || new Date().toISOString(),
@@ -767,12 +774,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       try {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          const uid = session?.user?.id;
-          if (uid) {
-            supabase.from('profiles').update({ wallet_balance: newBal }).eq('id', uid).then();
-          }
-        });
+        const uid = user?.id;
+        if (uid) {
+          supabase.from('profiles').update({ wallet_balance: newBal }).eq('id', uid).then();
+        }
       } catch (e) {}
       return {
         ...prev,
@@ -816,12 +821,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       try {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          const uid = session?.user?.id;
-          if (uid) {
-            supabase.from('profiles').update({ wallet_balance: newBal }).eq('id', uid).then();
-          }
-        });
+        const uid = user?.id;
+        if (uid) {
+          supabase.from('profiles').update({ wallet_balance: newBal }).eq('id', uid).then();
+        }
       } catch (e) {}
 
       return {
@@ -837,15 +840,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomer((prev) => ({ ...prev, ...data }));
     addToast('Profile Updated', 'Customer profile details updated successfully.', 'success');
     try {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        const uid = session?.user?.id;
-        if (uid) {
-          const dbUpdates: any = { updated_at: new Date().toISOString() };
-          if (data.fullName) dbUpdates.full_name = data.fullName;
-          if (data.phone) dbUpdates.phone = data.phone;
-          supabase.from('profiles').update(dbUpdates).eq('id', uid).then();
-        }
-      });
+      const uid = user?.id;
+      if (uid) {
+        const dbUpdates: any = { updated_at: new Date().toISOString() };
+        if (data.fullName) dbUpdates.full_name = data.fullName;
+        if (data.phone) dbUpdates.phone = data.phone;
+        supabase.from('profiles').update(dbUpdates).eq('id', uid).then();
+      }
     } catch (e) {}
   };
 
@@ -886,29 +887,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Asynchronously sync to Supabase
     try {
       const isValidUUID = (str?: string | null) => !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        const rawUserId = session?.user?.id || user?.id || null;
-        const validDbUserId = isValidUUID(rawUserId) ? rawUserId : null;
-        supabase.from('subscriptions').insert({
-          id: newSub.id,
-          user_id: validDbUserId,
-          customer_name: newSub.customerName,
-          customer_phone: newSub.customerPhone,
-          delivery_address: newSub.deliveryAddress || customer.addresses[0] || {},
-          product_id: newSub.productId,
-          product_name: newSub.productName,
-          variant_id: newSub.variantId,
-          variant_name: newSub.variantName,
-          quantity: newSub.quantityPerDelivery,
-          schedule_type: newSub.frequency,
-          custom_days: newSub.customDays || [],
-          start_date: newSub.startDate,
-          delivery_slot: newSub.deliverySlot,
-          status: newSub.status,
-          monthly_cost: newSub.monthlyEstimate,
-        }).then(({ error }) => {
-          if (error) console.warn('Supabase subscription sync note:', error.message);
-        });
+      const rawUserId = user?.id || null;
+      const validDbUserId = isValidUUID(rawUserId) ? rawUserId : null;
+      supabase.from('subscriptions').insert({
+        id: newSub.id,
+        user_id: validDbUserId,
+        customer_name: newSub.customerName,
+        customer_phone: newSub.customerPhone,
+        delivery_address: newSub.deliveryAddress || customer.addresses[0] || {},
+        product_id: newSub.productId,
+        product_name: newSub.productName,
+        variant_id: newSub.variantId,
+        variant_name: newSub.variantName,
+        quantity: newSub.quantityPerDelivery,
+        schedule_type: newSub.frequency,
+        custom_days: newSub.customDays || [],
+        start_date: newSub.startDate,
+        delivery_slot: newSub.deliverySlot,
+        status: newSub.status,
+        monthly_cost: newSub.monthlyEstimate,
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase subscription sync note:', error.message);
       });
     } catch (e) {}
   };
@@ -1093,7 +1092,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         user_id: validDbUserId,
         customer_name: newOrder.customerName,
         customer_phone: newOrder.customerPhone,
-        delivery_address: newOrder.deliveryAddress || {},
+        delivery_address: {
+          ...(newOrder.deliveryAddress || {}),
+          driver_name: newOrder.driverName,
+          driver_phone: newOrder.driverPhone,
+        },
         items: newOrder.items || [],
         subtotal: newOrder.subtotal,
         discount: newOrder.discount,
@@ -1105,8 +1108,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         delivery_date: newOrder.deliveryDate,
         delivery_slot: newOrder.deliverySlot,
         otp: newOrder.otp,
-        driver_name: newOrder.driverName,
-        driver_phone: newOrder.driverPhone,
       }).then(({ error }) => {
         if (error) console.warn('Supabase order sync note:', error.message);
       });
@@ -1188,8 +1189,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           deliveryDate: d.delivery_date || '',
           deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
           status: (d.status as any) || 'Order Placed',
-          driverName: d.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
-          driverPhone: d.driver_phone || '+91 98112 33445',
+          driverName: d.driver_name || d.delivery_address?.driver_name || ((d.delivery_address?.pincode || '').startsWith('16') ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)'),
+          driverPhone: d.driver_phone || d.delivery_address?.driver_phone || ((d.delivery_address?.pincode || '').startsWith('16') ? '+91 98222 33445' : '+91 98111 22334'),
           otp: d.otp || '4821',
           createdAt: d.created_at || new Date().toISOString(),
           updatedAt: d.created_at || new Date().toISOString(),
