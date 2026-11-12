@@ -24,10 +24,11 @@ import {
   ArrowRight,
   ShieldCheck,
   ShieldAlert,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function DeliveryExecutivePage() {
-  const { orders, updateOrderStatus, addToast } = useApp();
+  const { orders, updateOrderStatus, refreshOrders, addToast } = useApp();
   const { user, profile, isRider, isAdmin, isLoading, signIn, signOut } = useAuth();
 
   const [riderEmail, setRiderEmail] = useState('');
@@ -251,6 +252,17 @@ export default function DeliveryExecutivePage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              await refreshOrders();
+              addToast('Route Deliveries Synced', 'Latest assigned orders synced.', 'success');
+            }}
+            title="Sync Latest Deliveries"
+            className="p-1.5 rounded-lg text-savera-saffron hover:bg-slate-800 transition flex items-center gap-1 text-xs font-bold border border-slate-700"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Sync</span>
+          </button>
           <button
             onClick={() => signOut()}
             title="Sign Out of Rider Portal"

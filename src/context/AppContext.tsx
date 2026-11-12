@@ -101,6 +101,8 @@ interface AppContextType {
   ) => Order;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
   cancelOrder: (orderId: string, reason?: string) => void;
+  refreshOrders: () => Promise<void>;
+  refreshSubscriptions: () => Promise<void>;
 
   // Admin Data & Management
   adminRole: AdminRole;
@@ -265,21 +267,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addresses: userAddresses,
       }));
 
-      // Fetch user-specific orders from Supabase (MERGE rather than replace)
-      supabase
-        .from('orders')
-        .select('*')
-        .or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`)
+      const isTeamAdmin = profile?.role === 'admin' || user.email === 'admin@saverafarms.com' || user.email === 'operations@saverafarms.com' || user.email === 'manager@saverafarms.com';
+      const isTeamRider = profile?.role === 'rider' || (user.email && user.email.includes('rider'));
+
+      // 1. Fetch orders from Supabase
+      // Team Admins and Riders fetch all platform orders for complete oversight and dispatch
+      // Standard customers fetch their own scoped orders
+      let ordersQuery = supabase.from('orders').select('*');
+      if (!isTeamAdmin && !isTeamRider) {
+        ordersQuery = ordersQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
+      }
+
+      ordersQuery
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (data && !error) {
             const fetchedUserOrders: Order[] = data.map((d: any) => ({
               id: d.id,
               orderNumber: d.order_number,
-              customerId: d.user_id || user.id,
-              customerName: d.customer_name || realName,
-              customerPhone: d.customer_phone || realPhone,
-              customerEmail: realEmail,
+              customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
+              customerName: d.customer_name || 'Savera Customer',
+              customerPhone: d.customer_phone || '',
+              customerEmail: d.customer_email || '',
               items: d.items || [],
               subtotal: Number(d.subtotal) || 0,
               deliveryFee: Number(d.delivery_fee) || 0,
@@ -299,15 +308,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               updatedAt: d.created_at || new Date().toISOString(),
             }));
 
+            const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
+            const activeOrders = baselineTime
+              ? fetchedUserOrders.filter((o) => o.createdAt >= baselineTime)
+              : fetchedUserOrders;
+
             // Safely merge Supabase orders with existing local orders
             setOrders((prevOrders) => {
               const orderMap = new Map<string, Order>();
-              prevOrders.forEach((o) => orderMap.set(o.orderNumber || o.id, o));
+              prevOrders.forEach((o) => {
+                if (!baselineTime || o.createdAt >= baselineTime) {
+                  orderMap.set(o.orderNumber || o.id, o);
+                }
+              });
               localUserOrders.forEach((o) => {
                 const key = o.orderNumber || o.id;
                 if (!orderMap.has(key)) orderMap.set(key, o);
               });
-              fetchedUserOrders.forEach((o) => {
+              activeOrders.forEach((o) => {
                 const key = o.orderNumber || o.id;
                 if (orderMap.has(key)) {
                   orderMap.set(key, { ...orderMap.get(key)!, ...o });
@@ -318,32 +336,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const merged = Array.from(orderMap.values());
               if (typeof window !== 'undefined') {
                 localStorage.setItem('savera_orders_v3', JSON.stringify(merged));
-                localStorage.setItem(userOrdersKey, JSON.stringify(merged.filter(o => o.customerId === user.id || o.customerEmail?.toLowerCase() === realEmail.toLowerCase())));
+                if (!isTeamAdmin && !isTeamRider) {
+                  localStorage.setItem(userOrdersKey, JSON.stringify(merged.filter(o => o.customerId === user.id || o.customerEmail?.toLowerCase() === realEmail.toLowerCase())));
+                }
               }
               return merged;
             });
 
-            setCustomer((c) => ({
-              ...c,
-              totalOrders: fetchedUserOrders.length || c.totalOrders,
-              totalSpent: fetchedUserOrders.reduce((sum, o) => sum + (o.paymentStatus === 'Paid' ? o.totalAmount : 0), 0) || c.totalSpent,
-            }));
+            if (!isTeamAdmin && !isTeamRider) {
+              setCustomer((c) => ({
+                ...c,
+                totalOrders: activeOrders.length || c.totalOrders,
+                totalSpent: activeOrders.reduce((sum, o) => sum + (o.paymentStatus === 'Paid' ? o.totalAmount : 0), 0) || c.totalSpent,
+              }));
+            }
           }
         });
 
-      // Fetch user-specific subscriptions from Supabase (MERGE rather than replace)
-      supabase
-        .from('subscriptions')
-        .select('*')
-        .or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`)
+      // 2. Fetch subscriptions from Supabase
+      let subsQuery = supabase.from('subscriptions').select('*');
+      if (!isTeamAdmin) {
+        subsQuery = subsQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
+      }
+
+      subsQuery
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (data && !error) {
             const fetchedUserSubs: MilkSubscription[] = data.map((d: any) => ({
               id: d.id,
-              customerId: d.user_id || user.id,
-              customerName: d.customer_name || realName,
-              customerPhone: d.customer_phone || realPhone,
+              customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
+              customerName: d.customer_name || 'Savera Member',
+              customerPhone: d.customer_phone || '',
               productId: d.product_id,
               productName: d.product_name,
               variantId: d.variant_id || 'var-1L',
@@ -361,13 +385,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               monthlyEstimate: Number(d.monthly_cost) || 2850,
             }));
 
+            const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
+            const activeSubs = baselineTime
+              ? fetchedUserSubs.filter((s) => s.startDate >= baselineTime.split('T')[0])
+              : fetchedUserSubs;
+
             setSubscriptions((prevSubs) => {
               const subMap = new Map<string, MilkSubscription>();
               prevSubs.forEach((s) => subMap.set(s.id, s));
               localUserSubs.forEach((s) => {
                 if (!subMap.has(s.id)) subMap.set(s.id, s);
               });
-              fetchedUserSubs.forEach((s) => {
+              activeSubs.forEach((s) => {
                 if (subMap.has(s.id)) {
                   subMap.set(s.id, { ...subMap.get(s.id)!, ...s });
                 } else {
@@ -377,7 +406,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const merged = Array.from(subMap.values());
               if (typeof window !== 'undefined') {
                 localStorage.setItem('savera_subscriptions_v3', JSON.stringify(merged));
-                localStorage.setItem(userSubsKey, JSON.stringify(merged.filter(s => s.customerId === user.id)));
+                if (!isTeamAdmin) {
+                  localStorage.setItem(userSubsKey, JSON.stringify(merged.filter(s => s.customerId === user.id)));
+                }
               }
               return merged;
             });
@@ -974,32 +1005,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Asynchronously sync to Supabase database (validating UUID foreign key)
     try {
       const isValidUUID = (str?: string | null) => !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        const rawUserId = session?.user?.id || user?.id || null;
-        const validDbUserId = isValidUUID(rawUserId) ? rawUserId : null;
-        supabase.from('orders').insert({
-          id: newOrder.id,
-          order_number: newOrder.orderNumber,
-          user_id: validDbUserId,
-          customer_name: newOrder.customerName,
-          customer_phone: newOrder.customerPhone,
-          delivery_address: newOrder.deliveryAddress || {},
-          items: newOrder.items || [],
-          subtotal: newOrder.subtotal,
-          discount: newOrder.discount,
-          delivery_fee: newOrder.deliveryFee,
-          total_amount: newOrder.totalAmount,
-          payment_method: newOrder.paymentMethod,
-          payment_status: newOrder.paymentStatus,
-          status: newOrder.status,
-          delivery_date: newOrder.deliveryDate,
-          delivery_slot: newOrder.deliverySlot,
-          otp: newOrder.otp,
-          driver_name: newOrder.driverName,
-          driver_phone: newOrder.driverPhone,
-        }).then(({ error }) => {
-          if (error) console.warn('Supabase order sync note:', error.message);
-        });
+      const rawUserId = user?.id || null;
+      const validDbUserId = isValidUUID(rawUserId) ? rawUserId : null;
+      supabase.from('orders').insert({
+        id: newOrder.id,
+        order_number: newOrder.orderNumber,
+        user_id: validDbUserId,
+        customer_name: newOrder.customerName,
+        customer_phone: newOrder.customerPhone,
+        delivery_address: newOrder.deliveryAddress || {},
+        items: newOrder.items || [],
+        subtotal: newOrder.subtotal,
+        discount: newOrder.discount,
+        delivery_fee: newOrder.deliveryFee,
+        total_amount: newOrder.totalAmount,
+        payment_method: newOrder.paymentMethod,
+        payment_status: newOrder.paymentStatus,
+        status: newOrder.status,
+        delivery_date: newOrder.deliveryDate,
+        delivery_slot: newOrder.deliverySlot,
+        otp: newOrder.otp,
+        driver_name: newOrder.driverName,
+        driver_phone: newOrder.driverPhone,
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase order sync note:', error.message);
       });
     } catch (e) {}
 
@@ -1024,20 +1053,152 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetToFreshBaseline = () => {
-    setOrders([]);
-    setSubscriptions([]);
-    setWalletTransactions([]);
-    setCart([]);
+    const newBaselineTime = new Date().toISOString();
     if (typeof window !== 'undefined') {
+      localStorage.setItem('savera_baseline_timestamp', newBaselineTime);
       localStorage.setItem('savera_orders_v3', JSON.stringify([]));
       localStorage.setItem('savera_subscriptions_v3', JSON.stringify([]));
       localStorage.setItem('savera_wallet_tx_v3', JSON.stringify([]));
       localStorage.removeItem('savera_orders_v2');
       localStorage.removeItem('savera_subscriptions_v2');
       localStorage.removeItem('savera_wallet_tx_v2');
+      if (user?.id) {
+        localStorage.removeItem(`savera_user_orders_${user.id}`);
+        localStorage.removeItem(`savera_user_subs_${user.id}`);
+      }
     }
+    setOrders([]);
+    setSubscriptions([]);
+    setWalletTransactions([]);
+    setCart([]);
     addToast('Baseline Reset to Zero (₹0)', 'All customer orders, active subscriptions, and revenue reset to 0.', 'success');
     logAuditAction('System Reset', 'Platform Baseline', 'Super Admin reset orders & revenue to zero');
+  };
+
+  const refreshOrders = async () => {
+    try {
+      const isTeamAdmin = profile?.role === 'admin' || user?.email === 'admin@saverafarms.com' || user?.email === 'operations@saverafarms.com' || user?.email === 'manager@saverafarms.com';
+      const isTeamRider = profile?.role === 'rider' || (user?.email && user.email.includes('rider'));
+
+      let ordersQuery = supabase.from('orders').select('*');
+      if (!isTeamAdmin && !isTeamRider && user) {
+        const realName = profile?.full_name || (user.user_metadata as any)?.full_name || user.email?.split('@')[0] || '';
+        const realPhone = profile?.phone || (user.user_metadata as any)?.phone || '';
+        ordersQuery = ordersQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
+      }
+
+      const { data, error } = await ordersQuery.order('created_at', { ascending: false });
+      if (data && !error) {
+        const fetchedOrders: Order[] = data.map((d: any) => ({
+          id: d.id,
+          orderNumber: d.order_number,
+          customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
+          customerName: d.customer_name || 'Savera Customer',
+          customerPhone: d.customer_phone || '',
+          customerEmail: d.customer_email || '',
+          items: d.items || [],
+          subtotal: Number(d.subtotal) || 0,
+          deliveryFee: Number(d.delivery_fee) || 0,
+          discount: Number(d.discount) || 0,
+          tax: 0,
+          totalAmount: Number(d.total_amount) || 0,
+          paymentMethod: (d.payment_method as any) || 'UPI',
+          paymentStatus: (d.payment_status as any) || 'Paid',
+          deliveryAddress: d.delivery_address || {},
+          deliveryDate: d.delivery_date || '',
+          deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
+          status: (d.status as any) || 'Order Placed',
+          driverName: d.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
+          driverPhone: d.driver_phone || '+91 98112 33445',
+          otp: d.otp || '4821',
+          createdAt: d.created_at || new Date().toISOString(),
+          updatedAt: d.created_at || new Date().toISOString(),
+        }));
+
+        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
+        const activeOrders = baselineTime
+          ? fetchedOrders.filter((o) => o.createdAt >= baselineTime)
+          : fetchedOrders;
+
+        setOrders((prevOrders) => {
+          const orderMap = new Map<string, Order>();
+          prevOrders.forEach((o) => {
+            if (!baselineTime || o.createdAt >= baselineTime) {
+              orderMap.set(o.orderNumber || o.id, o);
+            }
+          });
+          activeOrders.forEach((o) => {
+            const key = o.orderNumber || o.id;
+            orderMap.set(key, { ...(orderMap.get(key) || {}), ...o });
+          });
+          const merged = Array.from(orderMap.values());
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('savera_orders_v3', JSON.stringify(merged));
+          }
+          return merged;
+        });
+      }
+    } catch (e) {}
+  };
+
+  const refreshSubscriptions = async () => {
+    try {
+      const isTeamAdmin = profile?.role === 'admin' || user?.email === 'admin@saverafarms.com' || user?.email === 'operations@saverafarms.com' || user?.email === 'manager@saverafarms.com';
+
+      let subsQuery = supabase.from('subscriptions').select('*');
+      if (!isTeamAdmin && user) {
+        const realName = profile?.full_name || (user.user_metadata as any)?.full_name || user.email?.split('@')[0] || '';
+        const realPhone = profile?.phone || (user.user_metadata as any)?.phone || '';
+        subsQuery = subsQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
+      }
+
+      const { data, error } = await subsQuery.order('created_at', { ascending: false });
+      if (data && !error) {
+        const fetchedSubs: MilkSubscription[] = data.map((d: any) => ({
+          id: d.id,
+          customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
+          customerName: d.customer_name || 'Savera Member',
+          customerPhone: d.customer_phone || '',
+          productId: d.product_id,
+          productName: d.product_name,
+          variantId: d.variant_id || 'var-1L',
+          variantName: d.variant_name || '1 Litre Glass Bottle',
+          quantityPerDelivery: d.quantity || 1,
+          pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : 95,
+          frequency: (d.schedule_type as any) || 'Daily',
+          customDays: d.custom_days || [],
+          deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
+          deliveryAddress: d.delivery_address || {},
+          startDate: d.start_date || new Date().toISOString().split('T')[0],
+          status: (d.status as any) || 'Active',
+          skippedDates: [],
+          nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          monthlyEstimate: Number(d.monthly_cost) || 2850,
+        }));
+
+        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
+        const activeSubs = baselineTime
+          ? fetchedSubs.filter((s) => s.startDate >= baselineTime.split('T')[0])
+          : fetchedSubs;
+
+        setSubscriptions((prevSubs) => {
+          const subMap = new Map<string, MilkSubscription>();
+          prevSubs.forEach((s) => subMap.set(s.id, s));
+          activeSubs.forEach((s) => {
+            if (subMap.has(s.id)) {
+              subMap.set(s.id, { ...subMap.get(s.id)!, ...s });
+            } else {
+              subMap.set(s.id, s);
+            }
+          });
+          const merged = Array.from(subMap.values());
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('savera_subscriptions_v3', JSON.stringify(merged));
+          }
+          return merged;
+        });
+      }
+    } catch (e) {}
   };
 
   const cancelOrder = (orderId: string, reason?: string) => {
@@ -1328,6 +1489,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         placeOrder,
         updateOrderStatus,
         cancelOrder,
+        refreshOrders,
+        refreshSubscriptions,
         adminRole,
         setAdminRole,
         products,

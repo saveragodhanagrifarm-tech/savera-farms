@@ -152,7 +152,9 @@ export default function CheckoutPage() {
           origin: { y: 0.6 },
         });
       } catch (e) { }
-      router.push(`/orders/${newOrder.id}`);
+      setTimeout(() => {
+        router.push(`/orders/${newOrder.id}`);
+      }, 250);
       return;
     }
 
@@ -173,7 +175,9 @@ export default function CheckoutPage() {
               origin: { y: 0.6 },
             });
           } catch (e) { }
-          router.push(`/orders/${newOrder.id}`);
+          setTimeout(() => {
+            router.push(`/orders/${newOrder.id}`);
+          }, 250);
         },
         onFailure: (err) => {
           addToast('Payment Incomplete', err.message || 'Payment was not completed', 'info');
@@ -193,7 +197,9 @@ export default function CheckoutPage() {
       });
     } catch (e) { }
 
-    router.push(`/orders/${newOrder.id}`);
+    setTimeout(() => {
+      router.push(`/orders/${newOrder.id}`);
+    }, 250);
   };
 
   if (cart.length === 0) {

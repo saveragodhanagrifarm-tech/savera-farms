@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { OrderStatus } from '@/types';
+import { RefreshCw } from 'lucide-react';
 
 export default function AdminOrdersPage() {
-  const { orders, updateOrderStatus } = useApp();
+  const { orders, updateOrderStatus, refreshOrders, addToast } = useApp();
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filteredOrders = orders.filter((o) => filterStatus === 'All' || o.status === filterStatus);
 
@@ -28,18 +30,34 @@ export default function AdminOrdersPage() {
           <h1 className="font-serif text-3xl font-bold text-white">Order Management</h1>
           <p className="text-xs text-slate-400">View, update, and manage customer orders and delivery slots</p>
         </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs font-bold text-savera-saffron focus:outline-none"
-        >
-          <option value="All">All Order Statuses</option>
-          {statusOptions.map((st) => (
-            <option key={st} value={st}>
-              {st}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              setIsRefreshing(true);
+              await refreshOrders();
+              setIsRefreshing(false);
+              addToast('Orders Synced', 'Latest orders fetched from database.', 'success');
+            }}
+            disabled={isRefreshing}
+            className="bg-slate-900 hover:bg-slate-800 text-savera-saffron border border-slate-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition"
+            title="Refresh orders from database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Sync</span>
+          </button>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs font-bold text-savera-saffron focus:outline-none"
+          >
+            <option value="All">All Order Statuses</option>
+            {statusOptions.map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="bg-slate-950 rounded-3xl p-6 border border-slate-800 overflow-x-auto">

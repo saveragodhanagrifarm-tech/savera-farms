@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Milk, Calendar, PauseCircle, PlayCircle } from 'lucide-react';
+import { Milk, Calendar, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
 
 export default function AdminSubscriptionsPage() {
-  const { subscriptions, togglePauseSubscription } = useApp();
+  const { subscriptions, togglePauseSubscription, refreshSubscriptions, addToast } = useApp();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const totalVolumeForecast = subscriptions
     .filter((s) => s.status === 'Active')
@@ -18,11 +19,27 @@ export default function AdminSubscriptionsPage() {
           <h1 className="font-serif text-3xl font-bold text-white">Milk Subscription Management</h1>
           <p className="text-xs text-slate-400">View active recurring subscriptions and daily volume forecasting</p>
         </div>
-        <div className="bg-savera-dark text-savera-saffron p-3 rounded-2xl border border-savera-green/40 flex items-center gap-3">
-          <Milk className="w-6 h-6 text-savera-saffron" />
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-300 block">Daily Volume Forecast</span>
-            <span className="font-serif text-xl font-bold text-white">{totalVolumeForecast} Litres Required</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              setIsRefreshing(true);
+              await refreshSubscriptions();
+              setIsRefreshing(false);
+              addToast('Subscriptions Synced', 'Latest recurring milk orders fetched from database.', 'success');
+            }}
+            disabled={isRefreshing}
+            className="bg-slate-900 hover:bg-slate-800 text-savera-saffron border border-slate-700 font-bold px-3 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition"
+            title="Refresh subscriptions from database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Sync</span>
+          </button>
+          <div className="bg-savera-dark text-savera-saffron p-3 rounded-2xl border border-savera-green/40 flex items-center gap-3">
+            <Milk className="w-6 h-6 text-savera-saffron" />
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-300 block">Daily Volume Forecast</span>
+              <span className="font-serif text-xl font-bold text-white">{totalVolumeForecast} Litres Required</span>
+            </div>
           </div>
         </div>
       </div>

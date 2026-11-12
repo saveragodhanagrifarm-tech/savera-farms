@@ -54,6 +54,8 @@ export default function AdminDashboardPage() {
     updateOrderStatus,
     rechargeWallet,
     resetToFreshBaseline,
+    refreshOrders,
+    refreshSubscriptions,
     addToast,
   } = useApp();
 
@@ -1304,6 +1306,18 @@ export default function AdminDashboardPage() {
           <p className="text-xs text-slate-400">Live operational overview for Savera Farms D2C Platform</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={async () => {
+              await refreshOrders();
+              await refreshSubscriptions();
+              addToast('Live Data Synced', 'Latest customer orders and revenue synced from database.', 'success');
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-savera-saffron border border-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm"
+            title="Fetch latest customer orders and revenue from database"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Sync Live Orders</span>
+          </button>
           <button
             onClick={() => {
               if (window.confirm('Reset all test orders, subscriptions, and revenue back to 0 for clean testing?')) {
