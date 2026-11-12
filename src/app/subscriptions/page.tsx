@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { SubscribeModal } from '@/components/shop/SubscribeModal';
 import { Product, SubscriptionFrequency, DeliverySlot } from '@/types';
 import {
@@ -21,9 +22,12 @@ import {
   Edit,
   X,
   Check,
+  Lock,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function SubscriptionsPage() {
+  const { user, profile, isAdmin, openAuthModal } = useAuth();
   const {
     subscriptions,
     togglePauseSubscription,
@@ -33,7 +37,7 @@ export default function SubscriptionsPage() {
     products,
   } = useApp();
 
-  const [selectedSubId, setSelectedSubId] = useState<string>(subscriptions[0]?.id || '');
+  const [selectedSubId, setSelectedSubId] = useState<string>('');
   const [showNewSubModal, setShowNewSubModal] = useState(false);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
 
@@ -42,7 +46,42 @@ export default function SubscriptionsPage() {
   const [editSlot, setEditSlot] = useState<DeliverySlot>('5:00 AM - 7:00 AM');
   const [editFrequency, setEditFrequency] = useState<SubscriptionFrequency>('Daily');
 
-  const activeSub = subscriptions.find((s) => s.id === selectedSubId) || subscriptions[0];
+  if (!user && !isAdmin) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 rounded-3xl bg-savera-dark text-savera-saffron flex items-center justify-center mx-auto shadow-md">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h2 className="font-serif text-3xl font-bold text-savera-dark">Sign In to Manage Your Subscriptions</h2>
+        <p className="text-xs text-savera-brown max-w-md mx-auto leading-relaxed">
+          Log in with your verified Savera account to access daily 5 AM recurring morning milk drops, pause deliveries, or skip dates.
+        </p>
+        <button
+          onClick={() => openAuthModal('login')}
+          className="bg-savera-dark hover:bg-savera-green text-savera-cream font-bold px-8 py-3.5 rounded-2xl text-xs transition shadow-lg inline-flex items-center gap-2"
+        >
+          <span>Sign In / Register</span>
+          <ArrowRight className="w-4 h-4 text-savera-saffron" />
+        </button>
+      </div>
+    );
+  }
+
+  const activeName = profile?.full_name || user?.email?.split('@')[0] || '';
+  const mySubscriptions = subscriptions.filter((s) => {
+    if (isAdmin) return true;
+    if (user) {
+      return (
+        s.customerId === user.id ||
+        (user.email && s.customerId === user.email) ||
+        (activeName && s.customerName.toLowerCase() === activeName.toLowerCase()) ||
+        (profile?.phone && s.customerPhone === profile.phone)
+      );
+    }
+    return false;
+  });
+
+  const activeSub = mySubscriptions.find((s) => s.id === selectedSubId) || mySubscriptions[0];
 
   const milkProducts = products.filter((p) => p.isSubscriptionEligible);
   const defaultMilkProduct = milkProducts[0] || products[0];
@@ -107,7 +146,7 @@ export default function SubscriptionsPage() {
         </button>
       </div>
 
-      {subscriptions.length === 0 ? (
+      {mySubscriptions.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-savera-dark/10 shadow-soft space-y-4">
           <div className="w-16 h-16 rounded-full bg-savera-cream flex items-center justify-center mx-auto text-savera-brown">
             <Calendar className="w-8 h-8" />
@@ -128,7 +167,7 @@ export default function SubscriptionsPage() {
           {/* Active Subscriptions List */}
           <div className="lg:col-span-5 space-y-4">
             <h3 className="font-serif text-lg font-bold text-savera-dark">Your Subscription Cards</h3>
-            {subscriptions.map((sub) => (
+            {mySubscriptions.map((sub) => (
               <div
                 key={sub.id}
                 onClick={() => setSelectedSubId(sub.id)}

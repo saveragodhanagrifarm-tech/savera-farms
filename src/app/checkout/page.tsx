@@ -76,17 +76,17 @@ export default function CheckoutPage() {
 
   // Delivery Slot & Payment state
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>('5:00 AM - 7:00 AM');
-  const [deliveryNotes, setDeliveryNotes] = useState('Leave in milk cooler box at main entrance.');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<
     'UPI' | 'Credit Card' | 'Debit Card' | 'Net Banking' | 'Wallets' | 'Cash on Delivery'
   >('UPI');
 
   // Payment inputs
-  const [upiId, setUpiId] = useState('customer@okhdfcbank');
+  const [upiId, setUpiId] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
-  const [cardExpiry, setCardExpiry] = useState('08/28');
-  const [cardCvv, setCardCvv] = useState('888');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
 
   const selectedAddress =
@@ -535,6 +535,7 @@ export default function CheckoutPage() {
                           <input
                             type="text"
                             value={cardNumber}
+                            placeholder="4242 •••• •••• 4242"
                             onChange={(e) => setCardNumber(e.target.value)}
                             className="w-full bg-white border border-savera-dark/20 rounded-xl px-3 py-1.5 text-xs font-mono"
                           />
@@ -544,6 +545,7 @@ export default function CheckoutPage() {
                           <input
                             type="text"
                             value={cardExpiry}
+                            placeholder="MM/YY"
                             onChange={(e) => setCardExpiry(e.target.value)}
                             className="w-full bg-white border border-savera-dark/20 rounded-xl px-3 py-1.5 text-xs font-mono text-center"
                           />
@@ -553,6 +555,7 @@ export default function CheckoutPage() {
                           <input
                             type="password"
                             value={cardCvv}
+                            placeholder="•••"
                             onChange={(e) => setCardCvv(e.target.value)}
                             maxLength={4}
                             className="w-full bg-white border border-savera-dark/20 rounded-xl px-3 py-1.5 text-xs font-mono text-center"

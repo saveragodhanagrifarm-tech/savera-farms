@@ -84,7 +84,7 @@ export default function OrderTrackingPage() {
     }
   }, [id, orders]);
 
-  const order = orders.find((o) => o.id === id || o.orderNumber === id) || dbOrder || orders[0];
+  const order = orders.find((o) => o.id === id || o.orderNumber === id) || dbOrder || null;
 
   if (!order) {
     return (
