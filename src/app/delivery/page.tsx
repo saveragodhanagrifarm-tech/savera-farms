@@ -46,11 +46,17 @@ export default function DeliveryExecutivePage() {
   // -------------------------------------------------------------------
   // RIDER ROUTE ISOLATION:
   // Each field partner ONLY receives deliveries in their assigned hub!
-  // Ramesh Kumar -> Panchkula (134xxx)
-  // Gurpreet Singh -> Chandigarh & Mohali (160xxx)
+  // Rider 1 -> Panchkula (134xxx)
+  // Rider 2 -> Chandigarh & Mohali (160xxx)
   // -------------------------------------------------------------------
-  const isPanchkulaRider = profile?.email === 'rider.ramesh@saverafarms.com';
-  const isChandigarhRider = profile?.email === 'rider.gurpreet@saverafarms.com';
+  const isPanchkulaRider =
+    profile?.email === 'rider1@saverafarms.com' ||
+    profile?.email === 'rider.ramesh@saverafarms.com' ||
+    profile?.assignedRoute?.toLowerCase().includes('panchkula');
+  const isChandigarhRider =
+    profile?.email === 'rider2@saverafarms.com' ||
+    profile?.email === 'rider.gurpreet@saverafarms.com' ||
+    profile?.assignedRoute?.toLowerCase().includes('chandigarh');
 
   const routeFilteredOrders = orders.filter((o) => {
     if (isAdmin) return true; // Super admin preview can view all
@@ -185,16 +191,16 @@ export default function DeliveryExecutivePage() {
                 onClick={() => handleFillRider(3)}
                 className="text-left p-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:border-emerald-500 hover:bg-slate-800 transition"
               >
-                <span className="font-bold text-emerald-400 block truncate">🚚 Rider 1 (Ramesh)</span>
-                <span className="text-[10px] text-slate-400 block truncate">Panchkula Sec 1-15</span>
+                <span className="font-bold text-emerald-400 block truncate">🚚 Rider 1 (Panchkula)</span>
+                <span className="text-[10px] text-slate-400 block truncate font-mono">rider1@saverafarms.com</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleFillRider(4)}
                 className="text-left p-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:border-emerald-500 hover:bg-slate-800 transition"
               >
-                <span className="font-bold text-emerald-400 block truncate">🚚 Rider 2 (Gurpreet)</span>
-                <span className="text-[10px] text-slate-400 block truncate">Chandigarh Sec 17-35</span>
+                <span className="font-bold text-emerald-400 block truncate">🚚 Rider 2 (Chandigarh)</span>
+                <span className="text-[10px] text-slate-400 block truncate font-mono">rider2@saverafarms.com</span>
               </button>
             </div>
           </div>
@@ -207,10 +213,10 @@ export default function DeliveryExecutivePage() {
                 <input
                   type="email"
                   required
-                  placeholder="rider.ramesh@saverafarms.com"
+                  placeholder="rider1@saverafarms.com or rider2@saverafarms.com"
                   value={riderEmail}
                   onChange={(e) => setRiderEmail(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
             </div>
@@ -253,13 +259,13 @@ export default function DeliveryExecutivePage() {
   // -------------------------------------------------------------
   // ACTIVE RIDER PORTAL (Zero financial data / Zero OTP hints)
   // -------------------------------------------------------------
-  const activeRiderName = profile?.full_name || 'Ramesh Kumar';
+  const activeRiderName = profile?.full_name || (isChandigarhRider ? 'Delivery Partner 2 (Chandigarh)' : 'Delivery Partner 1 (Panchkula)');
   const activeRoute = profile?.assignedRoute || (
-    profile?.email === 'rider.gurpreet@saverafarms.com'
-      ? 'Chandigarh Sectors 17, 18, 22 & 35 (160017 / 160022)'
-      : 'Panchkula Sectors 1–15 & MDC (134109 / 134113)'
+    isChandigarhRider
+      ? 'Chandigarh Sectors 1–40 & Mohali (160xxx)'
+      : 'Panchkula Sectors 1–15 & MDC (134xxx)'
   );
-  const initials = activeRiderName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'RK';
+  const initials = activeRiderName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'DP';
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-6 space-y-6 max-w-lg mx-auto pb-16">

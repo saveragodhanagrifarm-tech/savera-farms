@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, PRESET_ACCOUNTS } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
-import { X, Mail, Lock, User, Phone, ShieldCheck, ArrowRight, Sparkles, Truck, ShieldAlert } from 'lucide-react';
+import { X, Mail, Lock, User, Phone, ArrowRight, Sparkles } from 'lucide-react';
 
 export function AuthModal() {
   const router = useRouter();
@@ -17,15 +17,8 @@ export function AuthModal() {
   const [phone, setPhone] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
 
   if (!showAuthModal) return null;
-
-  const handleFillPreset = (preset: typeof PRESET_ACCOUNTS[0]) => {
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setErrorMsg('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,68 +119,6 @@ export function AuthModal() {
               {errorMsg}
             </div>
           )}
-
-          {/* Provisioned Team Accounts (1 Super Admin, 2 Operations Admins, 2 Delivery Riders) */}
-          <div className="bg-savera-offwhite border border-savera-dark/10 rounded-2xl p-3 text-xs space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-savera-dark flex items-center gap-1.5 text-[11px]">
-                <ShieldCheck className="w-3.5 h-3.5 text-savera-green" />
-                <span>Authorized Team Sign-In (5 Provisioned Accounts)</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowDemoAccounts(!showDemoAccounts)}
-                className="text-[10px] text-savera-green font-bold hover:underline"
-              >
-                {showDemoAccounts ? 'Hide' : 'Quick Access'}
-              </button>
-            </div>
-
-            {showDemoAccounts && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[0])}
-                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
-                >
-                  <span className="text-[10px] font-bold text-savera-dark block truncate">👑 Super Admin (Arin)</span>
-                  <span className="text-[9px] text-gray-500 block truncate">admin@saverafarms.com</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[1])}
-                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
-                >
-                  <span className="text-[10px] font-bold text-savera-dark block truncate">⚙️ Operations Admin</span>
-                  <span className="text-[9px] text-gray-500 block truncate">operations@saverafarms.com</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[2])}
-                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
-                >
-                  <span className="text-[10px] font-bold text-savera-dark block truncate">📋 Dispatch Manager</span>
-                  <span className="text-[9px] text-gray-500 block truncate">manager@saverafarms.com</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[3])}
-                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
-                >
-                  <span className="text-[10px] font-bold text-savera-dark block truncate">🚚 Rider 1 (Ramesh)</span>
-                  <span className="text-[9px] text-gray-500 block truncate">Panchkula Hub</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[4])}
-                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70 sm:col-span-2"
-                >
-                  <span className="text-[10px] font-bold text-savera-dark block truncate">🚚 Rider 2 (Gurpreet)</span>
-                  <span className="text-[9px] text-gray-500 block truncate">Chandigarh Hub (Sec 17-35)</span>
-                </button>
-              </div>
-            )}
-          </div>
 
           {/* Social Sign In (Google) */}
           <button

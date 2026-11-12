@@ -175,7 +175,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onClick={() => handleFillAdmin(0)}
                   className="text-left p-2 rounded-xl border border-slate-700 bg-slate-900 hover:border-savera-saffron hover:bg-slate-800 transition"
                 >
-                  <span className="font-bold text-savera-saffron block truncate">👑 Super Admin (Arin)</span>
+                  <span className="font-bold text-savera-saffron block truncate">👑 Super Admin</span>
                   <span className="text-[10px] text-slate-400 block truncate">admin@saverafarms.com</span>
                 </button>
                 <button
