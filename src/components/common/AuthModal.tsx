@@ -15,7 +15,6 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<'customer' | 'rider'>('customer');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
@@ -55,23 +54,18 @@ export function AuthModal() {
           }
         }
       } else {
-        // Enforce: role is strictly 'customer' or 'rider'. Never 'admin'.
-        const { error, user } = await signUp(email, password, fullName, phone, role);
+        // Enforce: Public signup is strictly Customer. Zero role tampering.
+        const { error, user } = await signUp(email, password, fullName, phone);
         if (error) {
           setErrorMsg(error.message);
           addToast('Registration Failed', error.message, 'error');
         } else {
           addToast(
             'Account Created!',
-            role === 'rider'
-              ? 'Delivery Partner account registered! You can now access your delivery portal.'
-              : 'Your customer account is ready. Welcome to Savera Farms!',
+            'Your customer account is ready. Welcome to Savera Farms!',
             'success'
           );
           closeAuthModal();
-          if (role === 'rider') {
-            router.push('/delivery');
-          }
         }
       }
     } catch (err: any) {
@@ -123,7 +117,7 @@ export function AuthModal() {
             <p className="text-xs text-savera-brown mt-1">
               {authModalMode === 'login'
                 ? 'Access your daily milk subscriptions, orders, addresses, or partner console.'
-                : 'Join Savera Farms for fresh farm deliveries across Chandigarh & Panchkula.'}
+                : 'Join Savera Farms for pure A2 milk and organic staples in Chandigarh & Panchkula.'}
             </p>
           </div>
 
@@ -133,31 +127,31 @@ export function AuthModal() {
             </div>
           )}
 
-          {/* Preset Accounts Direct-Fill (Admins & Delivery Riders) */}
+          {/* Provisioned Team Accounts (1 Super Admin, 2 Operations Admins, 2 Delivery Riders) */}
           <div className="bg-savera-offwhite border border-savera-dark/10 rounded-2xl p-3 text-xs space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-savera-dark flex items-center gap-1.5 text-[11px]">
                 <ShieldCheck className="w-3.5 h-3.5 text-savera-green" />
-                <span>Authorized Team Sign-In</span>
+                <span>Authorized Team Sign-In (5 Provisioned Accounts)</span>
               </span>
               <button
                 type="button"
                 onClick={() => setShowDemoAccounts(!showDemoAccounts)}
                 className="text-[10px] text-savera-green font-bold hover:underline"
               >
-                {showDemoAccounts ? 'Hide' : 'Select Credentials'}
+                {showDemoAccounts ? 'Hide' : 'Quick Access'}
               </button>
             </div>
 
             {showDemoAccounts && (
-              <div className="grid grid-cols-2 gap-1.5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={() => handleFillPreset(PRESET_ACCOUNTS[0])}
                   className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
                 >
                   <span className="text-[10px] font-bold text-savera-dark block truncate">👑 Super Admin (Arin)</span>
-                  <span className="text-[9px] text-gray-500 block">admin@saverafarms.com</span>
+                  <span className="text-[9px] text-gray-500 block truncate">admin@saverafarms.com</span>
                 </button>
                 <button
                   type="button"
@@ -165,23 +159,31 @@ export function AuthModal() {
                   className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
                 >
                   <span className="text-[10px] font-bold text-savera-dark block truncate">⚙️ Operations Admin</span>
-                  <span className="text-[9px] text-gray-500 block">operations@saverafarms.com</span>
+                  <span className="text-[9px] text-gray-500 block truncate">operations@saverafarms.com</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFillPreset(PRESET_ACCOUNTS[2])}
                   className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
                 >
-                  <span className="text-[10px] font-bold text-savera-dark block truncate">🚚 Rider 1 (Ramesh)</span>
-                  <span className="text-[9px] text-gray-500 block">Panchkula Sec 1-15</span>
+                  <span className="text-[10px] font-bold text-savera-dark block truncate">📋 Dispatch Manager</span>
+                  <span className="text-[9px] text-gray-500 block truncate">manager@saverafarms.com</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFillPreset(PRESET_ACCOUNTS[3])}
                   className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70"
                 >
+                  <span className="text-[10px] font-bold text-savera-dark block truncate">🚚 Rider 1 (Ramesh)</span>
+                  <span className="text-[9px] text-gray-500 block truncate">Panchkula Hub</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFillPreset(PRESET_ACCOUNTS[4])}
+                  className="text-left p-2 rounded-xl border border-savera-dark/15 hover:border-savera-green hover:bg-white transition bg-white/70 sm:col-span-2"
+                >
                   <span className="text-[10px] font-bold text-savera-dark block truncate">🚚 Rider 2 (Gurpreet)</span>
-                  <span className="text-[9px] text-gray-500 block">Chandigarh Sec 17-35</span>
+                  <span className="text-[9px] text-gray-500 block truncate">Chandigarh Hub (Sec 17-35)</span>
                 </button>
               </div>
             )}
@@ -255,40 +257,6 @@ export function AuthModal() {
                     />
                   </div>
                 </div>
-
-                {/* Account Type (Strictly Customer or Rider - Admin is never self-assignable) */}
-                <div>
-                  <label className="text-savera-dark font-bold block mb-1">Account Type</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRole('customer')}
-                      className={`p-2.5 rounded-xl border font-bold text-center transition ${
-                        role === 'customer'
-                          ? 'bg-savera-green text-white border-savera-green shadow-sm'
-                          : 'bg-savera-offwhite text-savera-dark border-savera-dark/15'
-                      }`}
-                    >
-                      Customer
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('rider')}
-                      className={`p-2.5 rounded-xl border font-bold text-center transition ${
-                        role === 'rider'
-                          ? 'bg-savera-dark text-savera-saffron border-savera-dark shadow-sm'
-                          : 'bg-savera-offwhite text-savera-dark border-savera-dark/15'
-                      }`}
-                    >
-                      Delivery Partner
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    {role === 'customer'
-                      ? 'For ordering daily milk and farm-fresh organic staples.'
-                      : 'For assigned delivery drivers with field route tracking.'}
-                  </p>
-                </div>
               </>
             )}
 
@@ -327,7 +295,7 @@ export function AuthModal() {
               disabled={isSubmitting}
               className="w-full bg-savera-dark hover:bg-savera-green text-savera-cream font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
             >
-              <span>{isSubmitting ? 'Please wait...' : authModalMode === 'login' ? 'Sign In' : 'Create Account'}</span>
+              <span>{isSubmitting ? 'Please wait...' : authModalMode === 'login' ? 'Sign In' : 'Create Customer Account'}</span>
               <ArrowRight className="w-4 h-4 text-savera-saffron" />
             </button>
           </form>

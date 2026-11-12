@@ -228,6 +228,17 @@ export interface Coupon {
   validUntil: string;
 }
 
+export interface WalletTransaction {
+  id: string;
+  customerId: string;
+  type: 'Credit' | 'Debit';
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  referenceId: string;
+  createdAt: string;
+}
+
 export interface CustomerProfile {
   id: string;
   fullName: string;

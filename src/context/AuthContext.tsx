@@ -43,6 +43,15 @@ export const PRESET_ACCOUNTS = [
     assignedRoute: 'Panchkula Sector 19 Cold Depot',
   },
   {
+    id: 'usr-admin-3',
+    email: 'manager@saverafarms.com',
+    password: 'SaveraAdmin2026!',
+    full_name: 'Tricity Dispatch & Operations Manager',
+    phone: '+91 98765 43212',
+    role: 'admin' as const,
+    assignedRoute: 'Chandigarh & Panchkula Distribution Hub',
+  },
+  {
     id: 'usr-rider-1',
     email: 'rider.ramesh@saverafarms.com',
     password: 'SaveraRider2026!',
@@ -69,7 +78,7 @@ interface AuthContextType {
   isRider: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; profile?: UserProfile | null }>;
-  signUp: (email: string, password: string, fullName: string, phone?: string, role?: 'customer' | 'rider') => Promise<{ error: Error | null; user?: User | null }>;
+  signUp: (email: string, password: string, fullName: string, phone?: string) => Promise<{ error: Error | null; user?: User | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -99,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data && !error) {
         // Enforce: only authorized pre-approved emails can hold 'admin' role
         const email = data.email?.toLowerCase() || '';
-        const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com';
+        const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com' || email === 'manager@saverafarms.com';
         const role: 'customer' | 'admin' | 'rider' = (data.role === 'admin' && isAuthorizedAdmin)
           ? 'admin'
           : (data.role === 'rider' ? 'rider' : 'customer');
@@ -110,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Fallback from metadata with whitelist check
       const email = userEmail?.toLowerCase() || '';
-      const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com';
+      const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com' || email === 'manager@saverafarms.com';
       const role: 'customer' | 'admin' | 'rider' = isAuthorizedAdmin && metadata?.role === 'admin' 
         ? 'admin' 
         : (metadata?.role === 'rider' ? 'rider' : 'customer');
@@ -126,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return fallbackProfile;
     } catch (err) {
       const email = userEmail?.toLowerCase() || '';
-      const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com';
+      const isAuthorizedAdmin = email === 'admin@saverafarms.com' || email === 'operations@saverafarms.com' || email === 'manager@saverafarms.com';
       const fallbackProfile: UserProfile = {
         id: userId,
         email: userEmail || '',
@@ -257,12 +266,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     fullName: string,
-    phone?: string,
-    requestedRole: 'customer' | 'rider' = 'customer'
+    phone?: string
   ) => {
     setIsLoading(true);
-    // Security check: Super Admin accounts can NEVER be created via public signup
-    const sanitizedRole: 'customer' | 'rider' = requestedRole === 'rider' ? 'rider' : 'customer';
+    // Security check: Public registrations are strictly customers. Admin/Rider roles cannot be self-assigned.
+    const role = 'customer' as const;
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -271,7 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: fullName,
           phone: phone || '',
-          role: sanitizedRole,
+          role,
         },
       },
     });
@@ -283,7 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.user) {
       setUser(data.user);
-      await fetchProfile(data.user.id, data.user.email, { full_name: fullName, phone, role: sanitizedRole });
+      await fetchProfile(data.user.id, data.user.email, { full_name: fullName, phone, role });
     }
     setIsLoading(false);
     setShowAuthModal(false);

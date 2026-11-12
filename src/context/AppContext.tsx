@@ -15,6 +15,7 @@ import {
   DeliveryZone,
   Coupon,
   CustomerProfile,
+  WalletTransaction,
   SupportTicket,
   AuditLog,
   Review,
@@ -73,7 +74,10 @@ interface AppContextType {
   setSelectedPincode: (pin: string) => void;
   addAddress: (address: Omit<Address, 'id'>) => string;
   deleteAddress: (id: string) => void;
-  rechargeWallet: (amount: number) => void;
+  rechargeWallet: (amount: number, referenceId?: string, description?: string) => void;
+  walletTransactions: WalletTransaction[];
+  isAfterCutoff: boolean;
+  earliestDeliveryDate: string;
   updateCustomerProfile: (data: Partial<CustomerProfile>) => void;
 
   // Milk Subscriptions
@@ -163,6 +167,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(SEED_AUDIT_LOGS);
   const [reviews, setReviews] = useState<Review[]>(SEED_REVIEWS);
   const [adminRole, setAdminRole] = useState<AdminRole>('Super Admin');
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const isHydrated = useRef(false);
 
@@ -193,6 +198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPurchaseOrders(getStoredData('savera_purchase_orders_v2', SEED_PURCHASE_ORDERS));
     setDeliveryZones(getStoredData('savera_zones_v3', SEED_DELIVERY_ZONES));
     setCustomer(getStoredData('savera_customer_v2', SEED_CUSTOMER));
+    setWalletTransactions(getStoredData('savera_wallet_tx_v2', []));
     setSupportTickets(getStoredData('savera_tickets_v2', SEED_TICKETS));
     setAuditLogs(getStoredData('savera_audit_v2', SEED_AUDIT_LOGS));
     setReviews(getStoredData('savera_reviews_v2', SEED_REVIEWS));
@@ -524,9 +530,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Address Removed', 'Address deleted from your profile.', 'info');
   };
 
-  const rechargeWallet = (amount: number) => {
+  const rechargeWallet = (amount: number, referenceId?: string, description?: string) => {
+    const ref = referenceId || `WAL-${Math.floor(10000 + Math.random() * 90000)}`;
+    const desc = description || 'Online Wallet Recharge via Razorpay';
+
     setCustomer((prev) => {
       const newBal = prev.walletBalance + amount;
+      const tx: WalletTransaction = {
+        id: 'tx-' + Date.now(),
+        customerId: prev.id,
+        type: 'Credit',
+        amount,
+        balanceAfter: newBal,
+        description: desc,
+        referenceId: ref,
+        createdAt: new Date().toISOString(),
+      };
+      setWalletTransactions((txPrev) => {
+        const updatedTx = [tx, ...txPrev];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('savera_wallet_tx_v2', JSON.stringify(updatedTx));
+        }
+        return updatedTx;
+      });
+
       try {
         supabase.auth.getSession().then(({ data: { session } }) => {
           const uid = session?.user?.id;
@@ -541,7 +568,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
     addToast('Wallet Recharged!', `₹${amount} added successfully to your Savera Wallet.`, 'success');
-    logAuditAction('Wallet Recharge', customer.id, `Credited ₹${amount}`);
+    logAuditAction('Wallet Recharge', customer.id, `Credited ₹${amount} (Ref: ${ref})`);
   };
 
   const updateCustomerProfile = (data: Partial<CustomerProfile>) => {
@@ -670,12 +697,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deliverySlot: MilkSubscription['deliverySlot'],
     paymentMethod: Order['paymentMethod']
   ) => {
+    // 8:00 PM IST Cutoff logic:
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istNow = new Date(utc + (3600000 * 5.5)); // Indian Standard Time
+    const isPastCutoff = istNow.getHours() >= 20; // 8:00 PM IST or later
+    const daysToAdd = isPastCutoff ? 2 : 1;
+    const deliveryDateObj = new Date(istNow);
+    deliveryDateObj.setDate(deliveryDateObj.getDate() + daysToAdd);
+    const calculatedDeliveryDate = deliveryDateObj.toISOString().split('T')[0];
+
+    const isChandigarh = deliveryAddress.city.toLowerCase().includes('chandigarh') || deliveryAddress.pincode.startsWith('16');
+    const assignedDriverName = isChandigarh ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)';
+    const assignedDriverPhone = isChandigarh ? '+91 98222 33445' : '+91 98111 22334';
+
     const newOrder: Order = {
       id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
       orderNumber: 'SAV-' + Math.floor(10000 + Math.random() * 90000),
-      customerId: customer.id,
-      customerName: customer.fullName,
-      customerPhone: customer.phone,
+      customerId: user?.id || customer.id,
+      customerName: profile?.full_name || customer.fullName,
+      customerPhone: profile?.phone || customer.phone,
       items: [...cart],
       subtotal: cartSubtotal,
       deliveryFee,
@@ -686,17 +727,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       paymentMethod,
       paymentStatus: paymentMethod === 'Cash on Delivery' ? 'Pending' : 'Paid',
       deliveryAddress,
-      deliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      deliveryDate: calculatedDeliveryDate,
       deliverySlot,
       status: 'Order Placed',
-      driverName: 'Ramesh Kumar (Savera Delivery Partner)',
-      driverPhone: '+91 98112 33445',
+      driverName: assignedDriverName,
+      driverPhone: assignedDriverPhone,
       otp: Math.floor(1000 + Math.random() * 9000).toString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     setOrders((prev) => [newOrder, ...prev]);
+
+    // If paid via wallet, add debit transaction record
+    if (paymentMethod === 'Wallets') {
+      const remainingBal = Math.max(0, customer.walletBalance - cartTotal);
+      const tx: WalletTransaction = {
+        id: 'tx-' + Date.now(),
+        customerId: user?.id || customer.id,
+        type: 'Debit',
+        amount: cartTotal,
+        balanceAfter: remainingBal,
+        description: `Payment for Order #${newOrder.orderNumber}`,
+        referenceId: newOrder.orderNumber,
+        createdAt: new Date().toISOString(),
+      };
+      setWalletTransactions((txPrev) => {
+        const updatedTx = [tx, ...txPrev];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('savera_wallet_tx_v2', JSON.stringify(updatedTx));
+        }
+        return updatedTx;
+      });
+    }
 
     // Reward points
     const earnedPoints = Math.floor(cartTotal / 10);
@@ -709,7 +772,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     clearCart();
-    addToast('Order Placed Successfully!', `Order #${newOrder.orderNumber} confirmed for delivery tomorrow.`, 'success');
+    const confirmMsg = isPastCutoff
+      ? `Order #${newOrder.orderNumber} placed! (8 PM cutoff passed: scheduled for ${calculatedDeliveryDate} 5 AM).`
+      : `Order #${newOrder.orderNumber} confirmed for 5 AM morning delivery!`;
+    addToast('Order Placed Successfully!', confirmMsg, 'success');
     logAuditAction('New Order Placed', newOrder.orderNumber, `Order placed for ₹${cartTotal}`);
 
     // Asynchronously sync to Supabase database
@@ -991,6 +1057,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Audit Logs Cleared', 'Historical audit logs cleared.', 'info');
   };
 
+  // 8:00 PM IST Cutoff status
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istNow = new Date(utc + (3600000 * 5.5));
+  const isAfterCutoff = istNow.getHours() >= 20;
+  const daysToAdd = isAfterCutoff ? 2 : 1;
+  const deliveryDateObj = new Date(istNow);
+  deliveryDateObj.setDate(deliveryDateObj.getDate() + daysToAdd);
+  const earliestDeliveryDate = deliveryDateObj.toISOString().split('T')[0];
+
   return (
     <AppContext.Provider
       value={{
@@ -1016,6 +1092,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addAddress,
         deleteAddress,
         rechargeWallet,
+        walletTransactions,
+        isAfterCutoff,
+        earliestDeliveryDate,
         updateCustomerProfile,
         subscriptions,
         addSubscription,

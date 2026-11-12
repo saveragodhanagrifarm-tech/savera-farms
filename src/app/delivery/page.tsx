@@ -23,6 +23,7 @@ import {
   Lock,
   ArrowRight,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 
 export default function DeliveryExecutivePage() {
@@ -35,25 +36,78 @@ export default function DeliveryExecutivePage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [otpInput, setOtpInput] = useState<{ [orderId: string]: string }>({});
+  const [otpAttempts, setOtpAttempts] = useState<{ [orderId: string]: number }>({});
+  const [lockedOrders, setLockedOrders] = useState<{ [orderId: string]: boolean }>({});
+
   const [filterTab, setFilterTab] = useState<'All' | 'Pending' | 'Delivered'>('Pending');
   const [failedModalOrderId, setFailedModalOrderId] = useState<string | null>(null);
   const [failedReason, setFailedReason] = useState('Door locked / Customer not answering');
 
-  const filteredOrders = orders.filter((o) => {
+  // -------------------------------------------------------------------
+  // RIDER ROUTE ISOLATION:
+  // Each field partner ONLY receives deliveries in their assigned hub!
+  // Ramesh Kumar -> Panchkula (134xxx)
+  // Gurpreet Singh -> Chandigarh & Mohali (160xxx)
+  // -------------------------------------------------------------------
+  const isPanchkulaRider = profile?.email === 'rider.ramesh@saverafarms.com';
+  const isChandigarhRider = profile?.email === 'rider.gurpreet@saverafarms.com';
+
+  const routeFilteredOrders = orders.filter((o) => {
+    if (isAdmin) return true; // Super admin preview can view all
+    const pCode = o.deliveryAddress?.pincode || '';
+    const city = (o.deliveryAddress?.city || '').toLowerCase();
+    if (isPanchkulaRider) {
+      return pCode.startsWith('134') || city.includes('panchkula');
+    }
+    if (isChandigarhRider) {
+      return pCode.startsWith('160') || city.includes('chandigarh') || city.includes('mohali');
+    }
+    return true;
+  });
+
+  const filteredOrders = routeFilteredOrders.filter((o) => {
     if (filterTab === 'All') return true;
     if (filterTab === 'Pending') return o.status !== 'Delivered' && o.status !== 'Cancelled';
     if (filterTab === 'Delivered') return o.status === 'Delivered';
     return true;
   });
 
-  const deliveredCount = orders.filter((o) => o.status === 'Delivered').length;
+  const deliveredCount = routeFilteredOrders.filter((o) => o.status === 'Delivered').length;
 
   const handleMarkDelivered = (orderId: string, expectedOtp?: string) => {
-    const entered = otpInput[orderId];
-    if (expectedOtp && entered !== expectedOtp) {
-      addToast('Invalid OTP', `OTP "${entered || ''}" does not match customer OTP. Expected 4-digit code.`, 'error');
+    if (lockedOrders[orderId]) {
+      addToast('Order Verification Locked', 'Too many failed OTP attempts. Contact Panchkula dispatch.', 'error');
       return;
     }
+
+    const entered = (otpInput[orderId] || '').trim();
+    if (!entered || entered.length !== 4) {
+      addToast('Invalid OTP Format', 'Please enter the 4-digit code provided verbally by customer.', 'error');
+      return;
+    }
+
+    if (expectedOtp && entered !== expectedOtp) {
+      const attempts = (otpAttempts[orderId] || 0) + 1;
+      setOtpAttempts({ ...otpAttempts, [orderId]: attempts });
+
+      if (attempts >= 3) {
+        setLockedOrders({ ...lockedOrders, [orderId]: true });
+        addToast(
+          'Security Lockout Activated',
+          '3 incorrect OTP attempts. Order locked. Please contact dispatch at +91 172 4567890.',
+          'error'
+        );
+        return;
+      }
+
+      addToast(
+        'Incorrect OTP',
+        `The code "${entered}" is incorrect (${3 - attempts} attempt${3 - attempts === 1 ? '' : 's'} remaining).`,
+        'error'
+      );
+      return;
+    }
+
     updateOrderStatus(orderId, 'Delivered');
     addToast('Delivery Confirmed!', `Order ${orderId} marked as Delivered successfully.`, 'success');
   };
@@ -61,7 +115,7 @@ export default function DeliveryExecutivePage() {
   const handleConfirmFailed = () => {
     if (!failedModalOrderId) return;
     updateOrderStatus(failedModalOrderId, 'Cancelled');
-    addToast('Delivery Marked Failed', `Order ${failedModalOrderId} marked as Delivery Failed.`, 'info');
+    addToast('Delivery Marked Failed', `Order ${failedModalOrderId} recorded as delivery exception.`, 'info');
     setFailedModalOrderId(null);
   };
 
@@ -95,7 +149,11 @@ export default function DeliveryExecutivePage() {
     );
   }
 
-  // Rider Authentication Gate
+  // -------------------------------------------------------------
+  // RIDER AUTHENTICATION GATE:
+  // Unauthenticated visitors CANNOT see any customer names,
+  // addresses, phone numbers, or delivery routes!
+  // -------------------------------------------------------------
   if (!user || (!isRider && !isAdmin)) {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
@@ -106,7 +164,7 @@ export default function DeliveryExecutivePage() {
             </div>
             <h1 className="font-serif text-2xl font-bold text-white">Savera Express Rider</h1>
             <p className="text-xs text-slate-400">
-              Morning 5 AM Drop Management. Sign in with your assigned driver credentials.
+              Morning 5 AM Doorstep Drop Management. Authenticate with your assigned driver credentials to access your route.
             </p>
           </div>
 
@@ -116,7 +174,7 @@ export default function DeliveryExecutivePage() {
             </div>
           )}
 
-          {/* Quick Preset Rider Accounts */}
+          {/* Quick Preset Rider Accounts (Rider 1 & Rider 2) */}
           <div className="bg-slate-900 p-3.5 rounded-2xl border border-slate-800 space-y-2">
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
               Assigned Field Delivery Accounts:
@@ -124,7 +182,7 @@ export default function DeliveryExecutivePage() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => handleFillRider(2)}
+                onClick={() => handleFillRider(3)}
                 className="text-left p-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:border-emerald-500 hover:bg-slate-800 transition"
               >
                 <span className="font-bold text-emerald-400 block truncate">🚚 Rider 1 (Ramesh)</span>
@@ -132,7 +190,7 @@ export default function DeliveryExecutivePage() {
               </button>
               <button
                 type="button"
-                onClick={() => handleFillRider(3)}
+                onClick={() => handleFillRider(4)}
                 className="text-left p-2.5 rounded-xl border border-slate-700 bg-slate-950 hover:border-emerald-500 hover:bg-slate-800 transition"
               >
                 <span className="font-bold text-emerald-400 block truncate">🚚 Rider 2 (Gurpreet)</span>
@@ -192,7 +250,9 @@ export default function DeliveryExecutivePage() {
     );
   }
 
-  // Active Rider Route Console (Zero revenue/financials shown)
+  // -------------------------------------------------------------
+  // ACTIVE RIDER PORTAL (Zero financial data / Zero OTP hints)
+  // -------------------------------------------------------------
   const activeRiderName = profile?.full_name || 'Ramesh Kumar';
   const activeRoute = profile?.assignedRoute || (
     profile?.email === 'rider.gurpreet@saverafarms.com'
@@ -229,7 +289,7 @@ export default function DeliveryExecutivePage() {
         </div>
       </div>
 
-      {/* Driver Info Banner (No financial data) */}
+      {/* Driver Info Banner (Zero Financial Data) */}
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center text-xs">
         <div>
           <span className="text-slate-400 block">Driver: <strong className="text-white">{activeRiderName}</strong></span>
@@ -240,16 +300,16 @@ export default function DeliveryExecutivePage() {
             5 AM – 7 AM Slot
           </span>
           <span className="text-[10px] text-slate-400">
-            {deliveredCount}/{orders.length} Delivered
+            {deliveredCount}/{routeFilteredOrders.length} Delivered
           </span>
         </div>
       </div>
 
       {isAdmin && (
         <div className="bg-amber-950/40 border border-amber-800/40 p-2.5 rounded-xl text-xs text-amber-300 flex items-center justify-between">
-          <span>Admin Preview Mode Active</span>
+          <span>Super Admin Preview (Viewing All Routes)</span>
           <Link href="/admin" className="font-bold underline hover:text-white">
-            Return to Super Admin Console →
+            Admin Console →
           </Link>
         </div>
       )}
@@ -277,7 +337,7 @@ export default function DeliveryExecutivePage() {
           <div className="bg-slate-950 p-8 rounded-3xl border border-slate-800 text-center space-y-2">
             <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
             <h3 className="font-serif font-bold text-white text-base">No Orders in this list</h3>
-            <p className="text-xs text-slate-400">All morning assigned deliveries in this view are completed!</p>
+            <p className="text-xs text-slate-400">All morning assigned deliveries on this route are completed!</p>
           </div>
         ) : (
           filteredOrders.map((ord) => (
@@ -318,7 +378,7 @@ export default function DeliveryExecutivePage() {
                 </div>
               </div>
 
-              {/* Items Summary (Quantities only - strictly no order revenue/prices) */}
+              {/* Items Summary (Bottles/Quantities ONLY - zero financial figures) */}
               <div className="text-xs text-slate-400 bg-slate-900/50 p-3 rounded-xl border border-slate-800/50 space-y-1">
                 <span className="font-bold text-slate-200 block mb-1">Items to Deliver:</span>
                 {ord.items.map((it, i) => (
@@ -354,25 +414,38 @@ export default function DeliveryExecutivePage() {
                 </a>
               </div>
 
-              {/* Delivery Confirmation Controls */}
+              {/* Delivery Confirmation Controls (NO plaintext OTP hints) */}
               {ord.status !== 'Delivered' && ord.status !== 'Cancelled' && (
                 <div className="pt-2 space-y-2 border-t border-slate-800">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder={`Enter OTP (Hint: ${ord.otp})`}
-                      value={otpInput[ord.id] || ''}
-                      onChange={(e) => setOtpInput({ ...otpInput, [ord.id]: e.target.value })}
-                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                    />
-                    <button
-                      onClick={() => handleMarkDelivered(ord.id, ord.otp)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Delivered</span>
-                    </button>
-                  </div>
+                  {lockedOrders[ord.id] ? (
+                    <div className="bg-red-950/80 border border-red-800/60 p-3 rounded-xl text-center space-y-1">
+                      <div className="flex items-center justify-center gap-1.5 text-red-300 font-bold text-xs">
+                        <ShieldAlert className="w-4 h-4 text-red-400" />
+                        <span>Order Verification Locked</span>
+                      </div>
+                      <p className="text-[11px] text-red-400">
+                        3 incorrect attempts. Please contact dispatch supervisor to override.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={4}
+                        placeholder="Enter 4-digit customer OTP"
+                        value={otpInput[ord.id] || ''}
+                        onChange={(e) => setOtpInput({ ...otpInput, [ord.id]: e.target.value.replace(/[^0-9]/g, '') })}
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 tracking-wider text-center"
+                      />
+                      <button
+                        onClick={() => handleMarkDelivered(ord.id, ord.otp)}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Delivered</span>
+                      </button>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => setFailedModalOrderId(ord.id)}

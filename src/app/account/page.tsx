@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { openRazorpayCheckout } from '@/lib/razorpay';
 import { supabase } from '@/lib/supabase';
 import {
@@ -23,9 +24,18 @@ import {
   CreditCard,
   Phone,
   Mail,
+  Lock,
+  ArrowRight,
+  Sparkles,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Clock,
+  ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 
 export default function CustomerAccountPage() {
+  const { user, profile, openAuthModal, signOut } = useAuth();
   const {
     customer,
     subscriptions,
@@ -35,6 +45,7 @@ export default function CustomerAccountPage() {
     addAddress,
     deleteAddress,
     rechargeWallet,
+    walletTransactions,
     updateCustomerProfile,
     addToast,
   } = useApp();
@@ -62,16 +73,102 @@ export default function CustomerAccountPage() {
   const [profileEmail, setProfileEmail] = useState(customer.email);
 
   useEffect(() => {
-    setProfileName(customer.fullName);
-    setProfilePhone(customer.phone);
-    setProfileEmail(customer.email);
-    setNewFullName(customer.fullName);
-    setNewMobile(customer.phone);
-  }, [customer.fullName, customer.phone, customer.email]);
+    if (user) {
+      const activeName = profile?.full_name || customer.fullName;
+      const activePhone = profile?.phone || customer.phone;
+      const activeEmail = user.email || customer.email;
+      setProfileName(activeName);
+      setProfilePhone(activePhone);
+      setProfileEmail(activeEmail);
+      setNewFullName(activeName);
+      setNewMobile(activePhone);
+    }
+  }, [user, profile, customer.fullName, customer.phone, customer.email]);
 
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketCategory, setTicketCategory] = useState<any>('Subscription Issue');
   const [ticketDesc, setTicketDesc] = useState('');
+
+  // -------------------------------------------------------------
+  // PRIVACY & DATA ISOLATION GATE:
+  // If user is unauthenticated, NEVER expose any customer profile,
+  // orders, wallet balances, or delivery addresses.
+  // -------------------------------------------------------------
+  if (!user) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 sm:py-24 text-center space-y-6">
+        <div className="w-16 h-16 rounded-3xl bg-savera-cream text-savera-green flex items-center justify-center mx-auto shadow-soft border border-savera-dark/10">
+          <User className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-1.5 bg-savera-paleGreen text-savera-green px-3 py-1 rounded-full text-xs font-bold">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Secure Customer Portal</span>
+          </div>
+          <h1 className="font-serif text-3xl font-bold text-savera-dark">Your Savera Account</h1>
+          <p className="text-xs text-savera-brown max-w-md mx-auto leading-relaxed">
+            Please sign in to view your daily 5 AM morning milk delivery schedules, check real-time wallet balance, access order tracking, and manage delivery addresses.
+          </p>
+        </div>
+
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button
+            onClick={() => openAuthModal('login')}
+            className="w-full sm:w-auto bg-savera-dark text-savera-cream font-bold px-8 py-3.5 rounded-xl text-xs hover:bg-savera-green transition shadow-md flex items-center justify-center gap-2"
+          >
+            <span>Sign In to Account</span>
+            <ArrowRight className="w-4 h-4 text-savera-saffron" />
+          </button>
+          <button
+            onClick={() => openAuthModal('signup')}
+            className="w-full sm:w-auto bg-savera-offwhite text-savera-dark border border-savera-dark/15 font-bold px-8 py-3.5 rounded-xl text-xs hover:bg-white transition"
+          >
+            Create New Account
+          </button>
+        </div>
+
+        <div className="pt-8 border-t border-savera-dark/10 max-w-sm mx-auto text-left text-xs text-savera-brown/80 space-y-2">
+          <p className="font-bold text-savera-dark text-center">Why create an account?</p>
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-savera-green shrink-0" />
+            <span>Automate daily 5 AM milk deliveries with 1-click pauses</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-savera-green shrink-0" />
+            <span>Earn ₹100 referral cashback on every friend who tries Savera</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-savera-green shrink-0" />
+            <span>Recharge Savera Wallet for hassle-free morning drops</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // AUTHENTICATED CUSTOMER VIEW (Strict User-Level Filtering)
+  // -------------------------------------------------------------
+  const activeName = profile?.full_name || customer.fullName || user.email?.split('@')[0] || 'Customer';
+  const activePhone = profile?.phone || customer.phone || '';
+  const activeEmail = user.email || customer.email || '';
+  const activeWallet = typeof profile?.wallet_balance === 'number' ? profile.wallet_balance : customer.walletBalance;
+
+  // Filter orders and subscriptions belonging ONLY to this customer
+  const userOrders = orders.filter(
+    (o) =>
+      o.customerId === user.id ||
+      o.customerName.toLowerCase() === activeName.toLowerCase() ||
+      (activePhone && o.customerPhone === activePhone) ||
+      (user.email && o.customerPhone === user.email)
+  );
+
+  const userSubscriptions = subscriptions.filter(
+    (s) =>
+      s.customerId === user.id ||
+      s.customerName.toLowerCase() === activeName.toLowerCase() ||
+      (activePhone && s.customerPhone === activePhone)
+  );
 
   const copyReferralCode = () => {
     navigator.clipboard.writeText(customer.referralCode);
@@ -88,44 +185,15 @@ export default function CustomerAccountPage() {
 
     await openRazorpayCheckout({
       amountInRupees: rechargeAmount,
-      customerName: customer.fullName,
-      customerEmail: customer.email,
-      customerPhone: customer.phone,
+      customerName: activeName,
+      customerEmail: activeEmail,
+      customerPhone: activePhone,
       orderNumber: `WAL-${Math.floor(10000 + Math.random() * 90000)}`,
       onSuccess: (paymentId) => {
-        rechargeWallet(rechargeAmount);
-        addToast(
-          'Wallet Recharged Successfully! 🎉',
-          `₹${rechargeAmount} added to your Savera Wallet. Ref ID: ${paymentId}`,
-          'success'
-        );
-        // Sync wallet transaction to Supabase
-        try {
-          supabase.from('orders').insert({
-            id: 'WAL-' + Date.now(),
-            order_number: 'WAL-' + Math.floor(10000 + Math.random() * 90000),
-            customer_name: customer.fullName,
-            customer_phone: customer.phone,
-            delivery_address: {},
-            items: [
-              {
-                productId: 'wallet-recharge',
-                productName: 'Savera Wallet Top-up',
-                price: rechargeAmount,
-                quantity: 1,
-              },
-            ],
-            total_amount: rechargeAmount,
-            payment_method: 'Online Payment Gateway',
-            payment_status: 'Paid',
-            status: 'Completed',
-          }).then(({ error }) => {
-            if (error) console.warn('Wallet recharge sync note:', error.message);
-          });
-        } catch (e) {}
+        rechargeWallet(rechargeAmount, paymentId, 'Online Wallet Recharge via Razorpay');
       },
       onFailure: (err) => {
-        addToast('Payment Cancelled', 'Wallet recharge was not completed.', 'info');
+        addToast('Recharge Cancelled', err.message || 'Payment not completed.', 'info');
       },
     });
   };
@@ -164,8 +232,8 @@ export default function CustomerAccountPage() {
     e.preventDefault();
     if (!ticketDesc.trim()) return;
     createSupportTicket({
-      name: customer.fullName,
-      phone: customer.phone,
+      name: activeName,
+      phone: activePhone,
       category: ticketCategory,
       description: ticketDesc,
     });
@@ -176,14 +244,14 @@ export default function CustomerAccountPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Account Profile Banner */}
-      <div className="bg-savera-dark text-savera-cream rounded-3xl p-8 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-savera-dark text-savera-cream rounded-3xl p-6 sm:p-8 shadow-floating flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-savera-saffron text-savera-brown flex items-center justify-center font-serif text-2xl font-bold shadow-md">
-            {customer.fullName.charAt(0)}
+          <div className="w-16 h-16 rounded-full bg-savera-saffron text-savera-brown flex items-center justify-center font-serif text-2xl font-bold shadow-md shrink-0">
+            {activeName.charAt(0).toUpperCase()}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-serif text-2xl sm:text-3xl font-bold">{customer.fullName}</h1>
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold">{activeName}</h1>
               <button
                 onClick={() => setShowEditProfileModal(true)}
                 className="text-savera-saffron hover:text-white p-1"
@@ -192,14 +260,14 @@ export default function CustomerAccountPage() {
                 <Edit className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-savera-cream/80">
-              {customer.phone} • {customer.email}
+            <p className="text-xs text-savera-cream/80 mt-0.5">
+              {activePhone ? `${activePhone} • ` : ''}{activeEmail}
             </p>
           </div>
         </div>
 
         {/* Savera Wallet & Rewards */}
-        <div className="flex items-center gap-4 bg-savera-green/40 p-4 rounded-2xl border border-savera-saffron/30">
+        <div className="flex items-center gap-4 bg-savera-green/40 p-4 rounded-2xl border border-savera-saffron/30 shrink-0">
           <div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] uppercase font-bold text-savera-saffron block">Savera Wallet</span>
@@ -210,7 +278,7 @@ export default function CustomerAccountPage() {
                 + Recharge
               </button>
             </div>
-            <span className="font-serif text-2xl font-bold text-white block mt-0.5">₹{customer.walletBalance}</span>
+            <span className="font-serif text-2xl font-bold text-white block mt-0.5">₹{activeWallet}</span>
           </div>
 
           <div className="h-10 w-px bg-savera-cream/20" />
@@ -235,7 +303,7 @@ export default function CustomerAccountPage() {
             </span>
           </div>
           <p className="text-xs text-savera-brown/90 leading-relaxed">
-            Invite your friends to try pure A2 Desi Cow Milk. They get ₹100 off on their first order, and you get ₹100 in your Savera Wallet!
+            Invite your friends & neighbors in Chandigarh and Panchkula to try pure A2 Desi Cow Milk. They get ₹100 off on their first order, and you get ₹100 credited to your Savera Wallet!
           </p>
 
           <div className="flex items-center gap-2 bg-white p-3 rounded-2xl border border-savera-dark/15">
@@ -250,32 +318,92 @@ export default function CustomerAccountPage() {
           </div>
         </div>
 
-        {/* Quick Shortcuts */}
+        {/* Quick Links (Isolated to this customer) */}
         <div className="lg:col-span-6 grid grid-cols-2 gap-4">
           <Link
             href="/subscriptions"
-            className="bg-white p-6 rounded-3xl border border-savera-dark/10 shadow-soft hover:shadow-card transition flex flex-col justify-between group"
+            className="bg-white rounded-3xl p-6 border border-savera-dark/10 shadow-soft hover:shadow-hover transition space-y-2 group block"
           >
-            <Calendar className="w-8 h-8 text-savera-green mb-2 group-hover:scale-110 transition" />
-            <div>
-              <h4 className="font-serif font-bold text-savera-dark text-base">Active Subscriptions</h4>
-              <span className="text-xs text-savera-brown font-semibold">{subscriptions.length} recurring schedules</span>
+            <div className="w-10 h-10 rounded-2xl bg-savera-paleGreen text-savera-green flex items-center justify-center group-hover:scale-105 transition">
+              <Calendar className="w-5 h-5" />
             </div>
+            <h4 className="font-serif font-bold text-savera-dark text-base">Milk Subscriptions</h4>
+            <span className="text-xs text-savera-brown font-semibold block">
+              {userSubscriptions.length} active recurring {userSubscriptions.length === 1 ? 'schedule' : 'schedules'}
+            </span>
           </Link>
 
           <Link
             href="/orders"
-            className="bg-white p-6 rounded-3xl border border-savera-dark/10 shadow-soft hover:shadow-card transition flex flex-col justify-between group"
+            className="bg-white rounded-3xl p-6 border border-savera-dark/10 shadow-soft hover:shadow-hover transition space-y-2 group block"
           >
-            <Package className="w-8 h-8 text-savera-brown mb-2 group-hover:scale-110 transition" />
-            <div>
-              <h4 className="font-serif font-bold text-savera-dark text-base">Order History</h4>
-              <span className="text-xs text-savera-brown font-semibold">{orders.length} total orders placed</span>
+            <div className="w-10 h-10 rounded-2xl bg-savera-cream text-savera-brown flex items-center justify-center group-hover:scale-105 transition">
+              <Package className="w-5 h-5" />
             </div>
+            <h4 className="font-serif font-bold text-savera-dark text-base">Order History</h4>
+            <span className="text-xs text-savera-brown font-semibold block">
+              {userOrders.length} total orders placed
+            </span>
           </Link>
         </div>
 
-        {/* Saved Addresses Section */}
+        {/* Wallet Transaction Ledger (Auditable Financial Ledger) */}
+        <div className="lg:col-span-12 bg-white rounded-3xl p-6 sm:p-8 border border-savera-dark/10 shadow-soft space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-savera-green" />
+              <span>Wallet Passbook & Transaction Ledger</span>
+            </h3>
+            <button
+              onClick={() => setShowRechargeModal(true)}
+              className="text-xs font-bold text-savera-green hover:underline"
+            >
+              + Add Funds
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {walletTransactions.length === 0 ? (
+              <p className="text-xs text-gray-500 py-3">No transactions recorded yet. Recharge your wallet for automated morning deductions.</p>
+            ) : (
+              walletTransactions.slice(0, 5).map((tx) => (
+                <div
+                  key={tx.id}
+                  className="p-3.5 rounded-2xl bg-savera-offwhite border border-savera-dark/10 flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold shrink-0 ${
+                        tx.type === 'Credit'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {tx.type === 'Credit' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-savera-dark">{tx.description}</p>
+                      <span className="text-[10px] text-gray-500 font-mono">Ref: {tx.referenceId} • {new Date(tx.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span
+                      className={`font-serif font-bold text-sm block ${
+                        tx.type === 'Credit' ? 'text-emerald-700' : 'text-red-700'
+                      }`}
+                    >
+                      {tx.type === 'Credit' ? '+' : '-'}₹{tx.amount}
+                    </span>
+                    <span className="text-[10px] text-gray-500">Bal: ₹{tx.balanceAfter}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Saved Delivery Addresses */}
         <div className="lg:col-span-12 bg-white rounded-3xl p-6 sm:p-8 border border-savera-dark/10 shadow-soft space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
@@ -284,39 +412,44 @@ export default function CustomerAccountPage() {
             </h3>
             <button
               onClick={() => setShowAddressModal(true)}
-              className="bg-savera-dark text-savera-cream font-bold px-4 py-2 rounded-xl text-xs hover:bg-savera-green transition flex items-center gap-1"
+              className="bg-savera-dark text-savera-cream font-bold px-4 py-2 rounded-xl text-xs hover:bg-savera-green transition"
             >
-              <Plus className="w-3.5 h-3.5 text-savera-saffron" />
-              <span>+ Add New Address</span>
+              + Add New Address
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {customer.addresses.map((addr) => (
-              <div key={addr.id} className="p-4 rounded-2xl bg-savera-offwhite border border-savera-dark/10 space-y-2 relative">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-savera-dark">{addr.fullName}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-savera-dark text-savera-saffron text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {addr.type}
-                    </span>
-                    {customer.addresses.length > 1 && (
-                      <button
-                        onClick={() => deleteAddress(addr.id)}
-                        className="text-gray-400 hover:text-red-500 p-0.5"
-                        title="Delete address"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-savera-brown leading-relaxed">
-                  {addr.houseFlat}, {addr.street}, {addr.area}, {addr.city} - {addr.pincode}
-                </p>
-                <span className="text-[11px] font-semibold text-savera-green block">Ph: {addr.mobileNumber}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {customer.addresses.length === 0 ? (
+              <div className="sm:col-span-3 text-center py-6 text-xs text-gray-500">
+                No delivery addresses saved yet. Click "+ Add New Address" above.
               </div>
-            ))}
+            ) : (
+              customer.addresses.map((addr) => (
+                <div key={addr.id} className="p-4 rounded-2xl bg-savera-offwhite border border-savera-dark/15 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <span className="font-bold text-savera-dark text-xs">{addr.fullName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-savera-dark text-savera-saffron text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {addr.type}
+                      </span>
+                      {customer.addresses.length > 1 && (
+                        <button
+                          onClick={() => deleteAddress(addr.id)}
+                          className="text-gray-400 hover:text-red-500 p-0.5"
+                          title="Delete address"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-savera-brown leading-relaxed">
+                    {addr.houseFlat}, {addr.street}, {addr.area}, {addr.city} - {addr.pincode}
+                  </p>
+                  <span className="text-[11px] font-semibold text-savera-green block">Ph: {addr.mobileNumber}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -360,24 +493,33 @@ export default function CustomerAccountPage() {
             )}
           </div>
         </div>
+
+        {/* Sign Out Action */}
+        <div className="lg:col-span-12 pt-4 text-center">
+          <button
+            onClick={() => signOut()}
+            className="text-xs text-red-600 hover:text-red-700 font-bold inline-flex items-center gap-1.5 transition"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out of Savera Account</span>
+          </button>
+        </div>
       </div>
 
-      {/* Wallet Recharge Modal */}
+      {/* Recharge Wallet Modal */}
       {showRechargeModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-floating border border-savera-dark/10">
             <div className="flex justify-between items-center">
-              <h3 className="font-serif text-lg font-bold text-savera-dark flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-savera-green" />
-                <span>Recharge Savera Wallet</span>
-              </h3>
-              <button onClick={() => setShowRechargeModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h3 className="font-serif text-xl font-bold text-savera-dark">Recharge Savera Wallet</h3>
+              <button onClick={() => setShowRechargeModal(false)} className="text-gray-400 hover:text-savera-dark">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <p className="text-xs text-savera-brown">
               Add funds for automated, hassle-free morning milk subscription deductions.
             </p>
+
             <form onSubmit={handleRechargeSubmit} className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-savera-dark block mb-2">Select Amount:</label>
@@ -389,8 +531,8 @@ export default function CustomerAccountPage() {
                       onClick={() => setRechargeAmount(amt)}
                       className={`py-2 rounded-xl text-xs font-bold border transition ${
                         rechargeAmount === amt
-                          ? 'bg-savera-dark text-savera-saffron border-savera-dark'
-                          : 'bg-savera-offwhite border-savera-dark/15 text-savera-dark'
+                          ? 'bg-savera-green text-white border-savera-green'
+                          : 'bg-savera-offwhite text-savera-dark border-savera-dark/15'
                       }`}
                     >
                       +₹{amt}
@@ -403,11 +545,11 @@ export default function CustomerAccountPage() {
                 <label className="text-xs font-bold text-savera-dark block mb-1">Or Enter Custom Amount (₹):</label>
                 <input
                   type="number"
+                  min="100"
+                  step="50"
                   value={rechargeAmount}
                   onChange={(e) => setRechargeAmount(Number(e.target.value))}
-                  min={100}
-                  max={25000}
-                  className="w-full bg-savera-offwhite border border-savera-dark/20 rounded-xl px-3 py-2 text-sm font-bold font-mono"
+                  className="w-full px-4 py-2.5 rounded-xl border border-savera-dark/20 text-xs font-bold text-savera-dark focus:outline-none focus:border-savera-green"
                   required
                 />
               </div>
@@ -425,84 +567,108 @@ export default function CustomerAccountPage() {
 
       {/* Add Address Modal */}
       {showAddressModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 shadow-floating border border-savera-dark/10 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
-              <h3 className="font-serif text-lg font-bold text-savera-dark">Add New Delivery Address</h3>
-              <button onClick={() => setShowAddressModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h3 className="font-serif text-xl font-bold text-savera-dark">Add New Address</h3>
+              <button onClick={() => setShowAddressModal(false)} className="text-gray-400 hover:text-savera-dark">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSaveAddress} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
+
+            <form onSubmit={handleSaveAddress} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-savera-dark block mb-1">Full Name</label>
                 <input
                   type="text"
-                  placeholder="Full Name"
+                  required
                   value={newFullName}
                   onChange={(e) => setNewFullName(e.target.value)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                  required
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
                 />
+              </div>
+
+              <div>
+                <label className="font-bold text-savera-dark block mb-1">Mobile Number</label>
                 <input
-                  type="text"
-                  placeholder="Mobile Number"
+                  type="tel"
+                  required
                   value={newMobile}
                   onChange={(e) => setNewMobile(e.target.value)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                  required
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
                 />
               </div>
-              <input
-                type="text"
-                placeholder="House / Flat / Tower No."
-                value={newHouse}
-                onChange={(e) => setNewHouse(e.target.value)}
-                className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Street / Society / Building Name"
-                value={newStreet}
-                onChange={(e) => setNewStreet(e.target.value)}
-                className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                required
-              />
+
+              <div>
+                <label className="font-bold text-savera-dark block mb-1">House / Flat / Kothi No.</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. House #142, Sector 9"
+                  value={newHouse}
+                  onChange={(e) => setNewHouse(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-savera-dark block mb-1">Street / Block</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Near Geeta Mandir"
+                  value={newStreet}
+                  onChange={(e) => setNewStreet(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Area / Sector"
-                  value={newArea}
-                  onChange={(e) => setNewArea(e.target.value)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Pincode"
-                  value={newPincode}
-                  onChange={(e) => setNewPincode(e.target.value)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs font-mono font-bold"
-                  required
-                />
+                <div>
+                  <label className="font-bold text-savera-dark block mb-1">City</label>
+                  <input
+                    type="text"
+                    required
+                    value={newCity}
+                    onChange={(e) => setNewCity(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-savera-dark block mb-1">Pincode</label>
+                  <input
+                    type="text"
+                    required
+                    value={newPincode}
+                    onChange={(e) => setNewPincode(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-savera-dark/20 font-mono"
+                  />
+                </div>
               </div>
-              <div className="flex gap-2">
-                {(['Home', 'Work', 'Other'] as const).map((t) => (
-                  <button
-                    type="button"
-                    key={t}
-                    onClick={() => setNewType(t)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold border ${
-                      newType === t ? 'bg-savera-dark text-savera-saffron' : 'bg-savera-offwhite'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+
+              <div>
+                <label className="font-bold text-savera-dark block mb-1">Address Type</label>
+                <div className="flex gap-2">
+                  {(['Home', 'Work', 'Other'] as const).map((t) => (
+                    <button
+                      type="button"
+                      key={t}
+                      onClick={() => setNewType(t)}
+                      className={`flex-1 py-2 rounded-xl border font-bold ${
+                        newType === t
+                          ? 'bg-savera-green text-white border-savera-green'
+                          : 'bg-savera-offwhite border-savera-dark/15'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
               </div>
+
               <button
                 type="submit"
-                className="w-full bg-savera-dark text-savera-cream font-bold py-3 rounded-xl text-xs hover:bg-savera-green transition shadow-md"
+                className="w-full bg-savera-dark text-savera-cream font-bold py-3 rounded-xl hover:bg-savera-green transition mt-2 shadow-md"
               >
                 Save Delivery Address
               </button>
@@ -513,50 +679,43 @@ export default function CustomerAccountPage() {
 
       {/* Edit Profile Modal */}
       {showEditProfileModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-floating border border-savera-dark/10">
             <div className="flex justify-between items-center">
-              <h3 className="font-serif text-lg font-bold text-savera-dark">Edit Profile Details</h3>
-              <button onClick={() => setShowEditProfileModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h3 className="font-serif text-xl font-bold text-savera-dark">Edit Profile</h3>
+              <button onClick={() => setShowEditProfileModal(false)} className="text-gray-400 hover:text-savera-dark">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleUpdateProfile} className="space-y-3">
+
+            <form onSubmit={handleUpdateProfile} className="space-y-3 text-xs">
               <div>
-                <label className="text-xs font-bold text-savera-dark block mb-1">Full Name</label>
+                <label className="font-bold text-savera-dark block mb-1">Full Name</label>
                 <input
                   type="text"
+                  required
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                  required
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
                 />
               </div>
+
               <div>
-                <label className="text-xs font-bold text-savera-dark block mb-1">Mobile Number</label>
+                <label className="font-bold text-savera-dark block mb-1">Mobile Phone</label>
                 <input
-                  type="text"
+                  type="tel"
+                  required
                   value={profilePhone}
                   onChange={(e) => setProfilePhone(e.target.value)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs font-mono"
-                  required
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
                 />
               </div>
-              <div>
-                <label className="text-xs font-bold text-savera-dark block mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={profileEmail}
-                  onChange={(e) => setProfileEmail(e.target.value)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                  required
-                />
-              </div>
+
               <button
                 type="submit"
-                className="w-full bg-savera-dark text-savera-cream font-bold py-3 rounded-xl text-xs hover:bg-savera-green transition shadow-md"
+                className="w-full bg-savera-dark text-savera-cream font-bold py-3 rounded-xl hover:bg-savera-green transition mt-2 shadow-md"
               >
-                Save Profile
+                Save Changes
               </button>
             </form>
           </div>
@@ -565,45 +724,46 @@ export default function CustomerAccountPage() {
 
       {/* Support Ticket Modal */}
       {showTicketModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-floating border border-savera-dark/10 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 shadow-floating border border-savera-dark/10">
             <div className="flex justify-between items-center">
-              <h3 className="font-serif text-lg font-bold text-savera-dark">Raise Support Request</h3>
-              <button onClick={() => setShowTicketModal(false)} className="text-gray-400 hover:text-gray-600">
+              <h3 className="font-serif text-xl font-bold text-savera-dark">Raise Support Ticket</h3>
+              <button onClick={() => setShowTicketModal(false)} className="text-gray-400 hover:text-savera-dark">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateTicket} className="space-y-3">
+
+            <form onSubmit={handleCreateTicket} className="space-y-3 text-xs">
               <div>
-                <label className="text-xs font-bold text-savera-dark block mb-1">Issue Category:</label>
+                <label className="font-bold text-savera-dark block mb-1">Issue Category</label>
                 <select
                   value={ticketCategory}
                   onChange={(e) => setTicketCategory(e.target.value as any)}
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
                 >
-                  <option value="Subscription Issue">Subscription Issue</option>
-                  <option value="Delivery Issue">Delivery Delay or Time Issue</option>
-                  <option value="Product Issue">Product Quality / Glass Bottle</option>
-                  <option value="Payment Issue">Wallet or Payment Question</option>
+                  <option value="Subscription Issue">Subscription Issue (Quantity / Frequency)</option>
+                  <option value="Delivery Issue">Delivery Delay or Missed Drop</option>
+                  <option value="Product Issue">Bottle Quality or Packaging</option>
+                  <option value="Payment Issue">Wallet Recharge or Invoice</option>
                   <option value="Other">General Inquiry</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-savera-dark block mb-1">Description:</label>
+                <label className="font-bold text-savera-dark block mb-1">Describe Issue</label>
                 <textarea
-                  rows={3}
+                  rows={4}
+                  required
+                  placeholder="Please describe your issue in detail..."
                   value={ticketDesc}
                   onChange={(e) => setTicketDesc(e.target.value)}
-                  placeholder="Explain your inquiry or issue..."
-                  className="w-full bg-savera-offwhite border border-savera-dark/15 rounded-xl px-3 py-2 text-xs"
-                  required
+                  className="w-full px-3 py-2 rounded-xl border border-savera-dark/20"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-savera-dark text-savera-cream font-bold py-3 rounded-xl text-xs hover:bg-savera-green transition shadow-md"
+                className="w-full bg-savera-dark text-savera-cream font-bold py-3 rounded-xl hover:bg-savera-green transition mt-2 shadow-md"
               >
                 Submit Ticket
               </button>
