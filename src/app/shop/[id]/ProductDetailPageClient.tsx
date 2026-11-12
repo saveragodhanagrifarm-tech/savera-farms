@@ -54,7 +54,7 @@ export default function ProductDetailPage() {
       setActiveImageIndex(0);
       setQuantity(1);
     }
-  }, [id, product?.id]);
+  }, [id]);
 
   // Review Form Modal
   const [showReviewModal, setShowReviewModal] = useState(false);

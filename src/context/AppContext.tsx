@@ -110,7 +110,7 @@ interface AppContextType {
   products: Product[];
   addProduct: (product: Omit<Product, 'id'> | Product) => Product;
   updateProduct: (id: string, updates: Partial<Product>) => void;
-  updateProductPrice: (productId: string, variantId: string, newPrice: number, newMrp?: number) => void;
+  updateProductPrice: (productId: string, variantId: string, newPrice: number, newMrp?: number, newStock?: number) => void;
   deleteProduct: (id: string) => void;
   batches: BatchItem[];
   addBatch: (batch: Omit<BatchItem, 'id' | 'quantitySold' | 'status'>) => void;
@@ -179,7 +179,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load stored data on mount
   useEffect(() => {
-    const rawStoredProducts = getStoredData<Product[]>('savera_products_v4', SEED_PRODUCTS);
+    let rawStoredProducts = getStoredData<Product[]>('savera_products_v5', []);
+    if (!rawStoredProducts || rawStoredProducts.length === 0) {
+      // Check v4 and upgrade old default milk price (92 -> 100)
+      const v4Products = getStoredData<Product[]>('savera_products_v4', []);
+      if (v4Products && v4Products.length > 0) {
+        rawStoredProducts = v4Products.map((p) => {
+          if (p.id === 'prod-a2-milk') {
+            const v1 = p.variants.find((v) => v.id === 'var-a2m-1l');
+            if (v1 && v1.price === 92) {
+              const updatedVariants = p.variants.map((v) =>
+                v.id === 'var-a2m-1l' ? { ...v, price: 100, mrp: 110, discountPct: 9 } : v
+              );
+              return { ...p, variants: updatedVariants };
+            }
+          }
+          return p;
+        });
+      }
+    }
+
     const storedMap = new Map((rawStoredProducts || []).map((p) => [p.id, p]));
     const mergedProducts = SEED_PRODUCTS.map((sp) => {
       const custom = storedMap.get(sp.id);
@@ -192,6 +211,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
     setProducts(mergedProducts);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('savera_products_v5', JSON.stringify(mergedProducts));
+      localStorage.setItem('savera_products_v4', JSON.stringify(mergedProducts));
+    }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if ((e.key === 'savera_products_v5' || e.key === 'savera_products_v4') && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProducts(parsed);
+          }
+        } catch (err) {}
+      }
+    };
+    const handleCustomProductSync = (e: any) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setProducts(e.detail);
+      }
+    };
+    const handleFocusSync = () => {
+      const stored = localStorage.getItem('savera_products_v5') || localStorage.getItem('savera_products_v4');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProducts(parsed);
+          }
+        } catch (err) {}
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('savera-products-updated', handleCustomProductSync);
+    window.addEventListener('focus', handleFocusSync);
 
     setCart(getStoredData('savera_cart_v2', []));
     setCoupons(getStoredData('savera_coupons_v2', SEED_COUPONS));
@@ -209,6 +263,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs(getStoredData('savera_audit_v2', SEED_AUDIT_LOGS));
     setReviews(getStoredData('savera_reviews_v2', SEED_REVIEWS));
     isHydrated.current = true;
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('savera-products-updated', handleCustomProductSync);
+      window.removeEventListener('focus', handleFocusSync);
+    };
   }, []);
 
   // Synchronize authenticated user identity, orders, and subscriptions
@@ -1222,7 +1282,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProducts((prev) => {
       const updated = [newProduct, ...prev];
       if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
         localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
       }
       return updated;
     });
@@ -1235,7 +1297,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProducts((prev) => {
       const updated = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
       if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
         localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
       }
       return updated;
     });
@@ -1243,7 +1307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Product Updated', 'Product updated successfully.', 'success');
   };
 
-  const updateProductPrice = (productId: string, variantId: string, newPrice: number, newMrp?: number) => {
+  const updateProductPrice = (productId: string, variantId: string, newPrice: number, newMrp?: number, newStock?: number) => {
     let productName = '';
     setProducts((prev) => {
       const updated = prev.map((p) => {
@@ -1258,12 +1322,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             price: newPrice,
             mrp,
             discountPct,
+            stock: newStock !== undefined && !isNaN(newStock) ? newStock : v.stock,
           };
         });
         return { ...p, variants: updatedVariants };
       });
       if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
         localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
       }
       return updated;
     });
@@ -1278,7 +1345,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deletedName = target ? target.name : id;
       const updated = prev.filter((p) => p.id !== id);
       if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_products_v5', JSON.stringify(updated));
         localStorage.setItem('savera_products_v4', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
       }
       return updated;
     });

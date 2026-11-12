@@ -91,16 +91,9 @@ export default function AdminProductsPage() {
       quickPriceModal.product.id,
       quickPriceModal.variant.id,
       quickPriceModal.newPrice,
-      quickPriceModal.newMrp
+      quickPriceModal.newMrp,
+      quickPriceModal.newStock
     );
-
-    // Also update stock if modified
-    if (quickPriceModal.newStock !== quickPriceModal.variant.stock) {
-      const updatedVariants = quickPriceModal.product.variants.map((v) =>
-        v.id === quickPriceModal.variant.id ? { ...v, stock: quickPriceModal.newStock } : v
-      );
-      updateProduct(quickPriceModal.product.id, { variants: updatedVariants });
-    }
 
     setQuickPriceModal(null);
   };
@@ -117,7 +110,6 @@ export default function AdminProductsPage() {
       isSubscriptionEligible: editProductModal.isSubscriptionEligible,
       isBestSeller: editProductModal.isBestSeller,
       isFeatured: editProductModal.isFeatured,
-      variants: editProductModal.variants,
     });
 
     setEditProductModal(null);

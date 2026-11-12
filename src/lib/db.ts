@@ -906,7 +906,7 @@ export const SEED_PRODUCTS: Product[] = [
       '/images/milk-pouring.png',
     ],
     variants: [
-      { id: 'var-a2m-1l', name: '1 Litre Glass Bottle', price: 92, mrp: 100, discountPct: 8, stock: 450, sku: 'SAV-MILK-A2-1L', weightVolume: '1 L' },
+      { id: 'var-a2m-1l', name: '1 Litre Glass Bottle', price: 100, mrp: 110, discountPct: 9, stock: 450, sku: 'SAV-MILK-A2-1L', weightVolume: '1 L' },
       { id: 'var-a2m-500ml', name: '500 ml Glass Bottle', price: 48, mrp: 52, discountPct: 7, stock: 320, sku: 'SAV-MILK-A2-500ML', weightVolume: '500 ml' },
       { id: 'var-a2m-2l', name: '2 Litre Family Can', price: 178, mrp: 195, discountPct: 9, stock: 180, sku: 'SAV-MILK-A2-2L', weightVolume: '2 L' },
     ],
@@ -1281,7 +1281,7 @@ export const SEED_TICKETS: SupportTicket[] = [
 ];
 
 export const SEED_AUDIT_LOGS: AuditLog[] = [
-  { id: 'log-1', timestamp: '2026-08-23 10:15:22', user: 'Rahul Sharma (Admin)', role: 'Super Admin', action: 'Update Price', entity: 'A2 Milk 1L', details: 'Changed price from ₹90 to ₹92.' },
+  { id: 'log-1', timestamp: '2026-08-23 10:15:22', user: 'Rahul Sharma (Admin)', role: 'Super Admin', action: 'Update Price', entity: 'A2 Milk 1L', details: 'Changed price from ₹92 to ₹100 (MRP ₹110).' },
   { id: 'log-2', timestamp: '2026-08-23 06:00:00', user: 'Manoj Kumar', role: 'Production Manager', action: 'Batch Created', entity: 'BATCH-20260823-A2M', details: 'Added 500L bottled A2 milk batch.' }
 ];
 
