@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -24,6 +24,7 @@ import {
   Check,
   Lock,
   ArrowRight,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function SubscriptionsPage() {
@@ -34,12 +35,18 @@ export default function SubscriptionsPage() {
     skipSubscriptionDate,
     cancelSubscription,
     updateSubscription,
+    refreshSubscriptions,
     products,
   } = useApp();
 
   const [selectedSubId, setSelectedSubId] = useState<string>('');
   const [showNewSubModal, setShowNewSubModal] = useState(false);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    refreshSubscriptions();
+  }, []);
 
   // Edit Subscription Form State
   const [editQty, setEditQty] = useState(1);
@@ -67,17 +74,29 @@ export default function SubscriptionsPage() {
     );
   }
 
-  const activeName = profile?.full_name || user?.email?.split('@')[0] || '';
+  const activeName = (profile?.full_name || user?.email?.split('@')[0] || '').toLowerCase().trim();
+  const userEmail = (user?.email || profile?.email || '').toLowerCase().trim();
+  const userPhone = (profile?.phone || '').replace(/[^0-9]/g, '');
+
   const mySubscriptions = subscriptions.filter((s) => {
     if (isAdmin) return true;
-    if (user) {
-      return (
-        s.customerId === user.id ||
-        (user.email && s.customerId === user.email) ||
-        (activeName && s.customerName.toLowerCase() === activeName.toLowerCase()) ||
-        (profile?.phone && s.customerPhone === profile.phone)
-      );
-    }
+    if (!user) return false;
+
+    // 1. Customer ID match
+    if (s.customerId && (s.customerId === user.id || s.customerId.toLowerCase() === userEmail)) return true;
+
+    // 2. Email matching (top-level or inside deliveryAddress JSONB)
+    const sEmail = ((s.deliveryAddress as any)?.customer_email || (s.deliveryAddress as any)?.email || '').toLowerCase().trim();
+    if (userEmail && sEmail && sEmail === userEmail) return true;
+
+    // 3. Name matching
+    const sName = (s.customerName || (s.deliveryAddress as any)?.fullName || '').toLowerCase().trim();
+    if (activeName && sName && (sName === activeName || sName.includes(activeName) || activeName.includes(sName))) return true;
+
+    // 4. Phone matching
+    const sPhone = (s.customerPhone || (s.deliveryAddress as any)?.mobileNumber || '').replace(/[^0-9]/g, '');
+    if (userPhone && sPhone && userPhone.length >= 10 && sPhone.length >= 10 && userPhone.slice(-10) === sPhone.slice(-10)) return true;
+
     return false;
   });
 
@@ -137,13 +156,28 @@ export default function SubscriptionsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowNewSubModal(true)}
-          className="bg-savera-saffron hover:bg-savera-saffronDark text-savera-brown font-bold px-6 py-3 rounded-2xl text-xs shadow-md flex items-center gap-2 transition"
-        >
-          <Milk className="w-4 h-4 text-savera-dark" />
-          <span>+ Add New Subscription</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              setIsRefreshing(true);
+              await refreshSubscriptions();
+              setIsRefreshing(false);
+            }}
+            disabled={isRefreshing}
+            className="bg-white/10 hover:bg-white/20 text-savera-cream border border-white/20 font-bold px-4 py-3 rounded-2xl text-xs flex items-center gap-1.5 transition"
+            title="Fetch latest subscriptions from database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Sync</span>
+          </button>
+          <button
+            onClick={() => setShowNewSubModal(true)}
+            className="bg-savera-saffron hover:bg-savera-saffronDark text-savera-brown font-bold px-6 py-3 rounded-2xl text-xs shadow-md flex items-center gap-2 transition"
+          >
+            <Milk className="w-4 h-4 text-savera-dark" />
+            <span>+ Add New Subscription</span>
+          </button>
+        </div>
       </div>
 
       {mySubscriptions.length === 0 ? (

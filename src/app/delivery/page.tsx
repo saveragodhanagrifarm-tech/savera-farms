@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -30,6 +30,10 @@ import {
 export default function DeliveryExecutivePage() {
   const { orders, updateOrderStatus, refreshOrders, addToast } = useApp();
   const { user, profile, isRider, isAdmin, isLoading, signIn, signOut } = useAuth();
+
+  useEffect(() => {
+    refreshOrders();
+  }, []);
 
   const [riderEmail, setRiderEmail] = useState('');
   const [riderPassword, setRiderPassword] = useState('');
@@ -254,6 +258,9 @@ export default function DeliveryExecutivePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={async () => {
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('savera_baseline_timestamp');
+              }
               await refreshOrders();
               addToast('Route Deliveries Synced', 'Latest assigned orders synced.', 'success');
             }}

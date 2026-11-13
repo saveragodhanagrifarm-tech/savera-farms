@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { SupportTicket } from '@/types';
@@ -58,6 +58,11 @@ export default function AdminDashboardPage() {
     refreshSubscriptions,
     addToast,
   } = useApp();
+
+  useEffect(() => {
+    refreshOrders();
+    refreshSubscriptions();
+  }, []);
 
   // Support Desk Local State
   const [ticketFilter, setTicketFilter] = useState<'All' | 'Open' | 'In Progress' | 'Resolved'>('All');
@@ -1308,6 +1313,9 @@ export default function AdminDashboardPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={async () => {
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('savera_baseline_timestamp');
+              }
               await refreshOrders();
               await refreshSubscriptions();
               addToast('Live Data Synced', 'Latest customer orders and revenue synced from database.', 'success');

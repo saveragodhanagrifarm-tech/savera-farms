@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { Address, DeliverySlot } from '@/types';
 import {
   MapPin,
@@ -45,14 +46,17 @@ export default function CheckoutPage() {
     addToast,
   } = useApp();
 
+  const { user, profile, openAuthModal } = useAuth();
+  const [guestEmail, setGuestEmail] = useState(user?.email || customer.email || '');
+
   const [selectedAddressId, setSelectedAddressId] = useState<string>(
     customer.addresses.find((a) => a.isDefault)?.id || customer.addresses[0]?.id || ''
   );
 
   // Address Form state
   const [showAddressForm, setShowAddressForm] = useState(customer.addresses.length === 0);
-  const [fullName, setFullName] = useState(customer.fullName);
-  const [mobileNumber, setMobileNumber] = useState(customer.phone);
+  const [fullName, setFullName] = useState(profile?.full_name || customer.fullName || '');
+  const [mobileNumber, setMobileNumber] = useState(profile?.phone || customer.phone || '');
   const [houseFlat, setHouseFlat] = useState('');
   const [street, setStreet] = useState('');
   const [area, setArea] = useState('');
@@ -63,16 +67,23 @@ export default function CheckoutPage() {
   const [addressType, setAddressType] = useState<'Home' | 'Work' | 'Other'>('Home');
 
   useEffect(() => {
-    if (customer.fullName && customer.fullName !== 'Savera Guest') {
+    if (user?.email) {
+      setGuestEmail(user.email);
+    }
+    if (profile?.full_name && !fullName) {
+      setFullName(profile.full_name);
+    } else if (customer.fullName && customer.fullName !== 'Savera Guest' && !fullName) {
       setFullName(customer.fullName);
     }
-    if (customer.phone && customer.phone !== '+91 98765 43210') {
+    if (profile?.phone && !mobileNumber) {
+      setMobileNumber(profile.phone);
+    } else if (customer.phone && customer.phone !== '+91 98765 43210' && !mobileNumber) {
       setMobileNumber(customer.phone);
     }
     if (customer.addresses.length > 0 && !selectedAddressId) {
       setSelectedAddressId(customer.addresses[0].id);
     }
-  }, [customer.fullName, customer.phone, customer.addresses, selectedAddressId]);
+  }, [user?.email, profile?.full_name, profile?.phone, customer.fullName, customer.phone, customer.addresses, selectedAddressId]);
 
   // Delivery Slot & Payment state
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>('5:00 AM - 7:00 AM');
@@ -117,10 +128,11 @@ export default function CheckoutPage() {
   };
 
   const handleCompleteCheckout = () => {
+    const effectiveEmail = user?.email || profile?.email || guestEmail || customer.email;
     const addressToUse = selectedAddress || {
       id: 'addr-temp',
-      fullName,
-      mobileNumber,
+      fullName: fullName || profile?.full_name || customer.fullName || 'Customer',
+      mobileNumber: mobileNumber || profile?.phone || customer.phone || '+91 98765 43210',
       houseFlat: houseFlat || 'House 14',
       street: street || 'Main Boulevard',
       area: area || 'Sector 9',
@@ -162,7 +174,7 @@ export default function CheckoutPage() {
       openRazorpayCheckout({
         amountInRupees: cartTotal,
         customerName: addressToUse.fullName,
-        customerEmail: customer.email,
+        customerEmail: effectiveEmail,
         customerPhone: addressToUse.mobileNumber,
         orderNumber: `SAV-${Math.floor(1000 + Math.random() * 9000)}`,
         onSuccess: (paymentId) => {
@@ -252,6 +264,22 @@ export default function CheckoutPage() {
               </button>
             </div>
 
+            {!user && (
+              <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs">
+                <div className="space-y-0.5">
+                  <span className="font-bold text-amber-900 block">Sign-in recommended</span>
+                  <p className="text-[11px] text-amber-700">Link this order to your account for tracking morning 5 AM doorstep drops.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="bg-savera-dark hover:bg-savera-green text-savera-cream font-bold px-3 py-1.5 rounded-xl text-xs transition shrink-0 shadow-sm"
+                >
+                  Sign In
+                </button>
+              </div>
+            )}
+
             {/* Saved Address Cards */}
             {!showAddressForm && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -323,6 +351,17 @@ export default function CheckoutPage() {
                     required
                   />
                 </div>
+                {!user && (
+                  <div>
+                    <input
+                      type="email"
+                      placeholder="Email Address (for order tracking & invoices)"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      className="w-full bg-white border border-savera-dark/20 rounded-xl px-3 py-2 text-xs"
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     type="text"

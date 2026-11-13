@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { OrderStatus } from '@/types';
 import { RefreshCw } from 'lucide-react';
@@ -9,6 +9,10 @@ export default function AdminOrdersPage() {
   const { orders, updateOrderStatus, refreshOrders, addToast } = useApp();
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    refreshOrders();
+  }, []);
 
   const filteredOrders = orders.filter((o) => filterStatus === 'All' || o.status === filterStatus);
 
@@ -34,6 +38,9 @@ export default function AdminOrdersPage() {
           <button
             onClick={async () => {
               setIsRefreshing(true);
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('savera_baseline_timestamp');
+              }
               await refreshOrders();
               setIsRefreshing(false);
               addToast('Orders Synced', 'Latest orders fetched from database.', 'success');

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -10,8 +10,13 @@ import { Package, Clock, ArrowRight, RefreshCw, CheckCircle2, AlertCircle, Lock 
 export default function CustomerOrdersPage() {
   const router = useRouter();
   const { user, profile, isAdmin, openAuthModal } = useAuth();
-  const { orders, addToCart, products } = useApp();
+  const { orders, addToCart, products, refreshOrders } = useApp();
   const [filterTab, setFilterTab] = useState<'All' | 'Active' | 'Delivered' | 'Cancelled'>('All');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    refreshOrders();
+  }, []);
 
   if (!user && !isAdmin) {
     return (
@@ -43,22 +48,20 @@ export default function CustomerOrdersPage() {
     if (!user) return false;
 
     // 1. Direct user id match
-    if (o.customerId === user.id) return true;
+    if (o.customerId && (o.customerId === user.id || o.customerId.toLowerCase() === userEmail)) return true;
 
-    // 2. Email matching
-    if (userEmail) {
-      if (o.customerId && o.customerId.toLowerCase().trim() === userEmail) return true;
-      if (o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail) return true;
-    }
+    // 2. Email matching (top-level or inside deliveryAddress JSONB)
+    const oEmail = (o.customerEmail || (o.deliveryAddress as any)?.customer_email || (o.deliveryAddress as any)?.email || '').toLowerCase().trim();
+    if (userEmail && oEmail && oEmail === userEmail) return true;
 
     // 3. Name matching
-    const oName = (o.customerName || '').toLowerCase().trim();
+    const oName = (o.customerName || (o.deliveryAddress as any)?.fullName || '').toLowerCase().trim();
     if (userName && oName && (oName === userName || oName.includes(userName) || userName.includes(oName))) {
       return true;
     }
 
     // 4. Phone number matching (comparing trailing 10 digits)
-    const oPhoneClean = (o.customerPhone || '').replace(/[^0-9]/g, '');
+    const oPhoneClean = (o.customerPhone || (o.deliveryAddress as any)?.mobileNumber || '').replace(/[^0-9]/g, '');
     if (userPhoneClean && oPhoneClean && userPhoneClean.length >= 10 && oPhoneClean.length >= 10) {
       if (userPhoneClean.slice(-10) === oPhoneClean.slice(-10)) return true;
     }
@@ -104,12 +107,27 @@ export default function CustomerOrdersPage() {
             Track deliveries, view past orders, and quickly re-order your favorite dairy items
           </p>
         </div>
-        <Link
-          href="/shop"
-          className="bg-savera-dark text-savera-cream hover:bg-savera-green px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm"
-        >
-          + Place New Order
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              setIsRefreshing(true);
+              await refreshOrders();
+              setIsRefreshing(false);
+            }}
+            disabled={isRefreshing}
+            className="bg-white border border-savera-dark/15 hover:bg-savera-cream text-savera-dark font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm"
+            title="Fetch latest orders from database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Sync Orders</span>
+          </button>
+          <Link
+            href="/shop"
+            className="bg-savera-dark text-savera-cream hover:bg-savera-green px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm"
+          >
+            + Place New Order
+          </Link>
+        </div>
       </div>
 
       {/* Filter Tabs */}

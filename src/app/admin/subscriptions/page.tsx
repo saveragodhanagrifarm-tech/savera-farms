@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Milk, Calendar, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
 
 export default function AdminSubscriptionsPage() {
   const { subscriptions, togglePauseSubscription, refreshSubscriptions, addToast } = useApp();
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    refreshSubscriptions();
+  }, []);
 
   const totalVolumeForecast = subscriptions
     .filter((s) => s.status === 'Active')
@@ -23,6 +27,9 @@ export default function AdminSubscriptionsPage() {
           <button
             onClick={async () => {
               setIsRefreshing(true);
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('savera_baseline_timestamp');
+              }
               await refreshSubscriptions();
               setIsRefreshing(false);
               addToast('Subscriptions Synced', 'Latest recurring milk orders fetched from database.', 'success');

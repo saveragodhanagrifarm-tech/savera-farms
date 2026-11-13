@@ -254,10 +254,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const handleSync = () => {
       const updated = computeEffectiveProducts();
       setProducts(updated);
+
+      // Re-synchronize cart prices against updated catalog
+      setCart((prevCart) =>
+        prevCart.map((item) => {
+          const prod = updated.find((p) => p.id === item.productId);
+          const variant = prod?.variants.find((v) => v.id === item.variantId);
+          return variant ? { ...item, price: variant.price } : item;
+        })
+      );
+
+      // Cross-tab real-time orders synchronization
+      const updatedOrders = getStoredData<Order[]>('savera_orders_v3', []);
+      if (updatedOrders.length > 0) {
+        setOrders((prev) => {
+          const orderMap = new Map<string, Order>();
+          prev.forEach((o) => orderMap.set(o.orderNumber || o.id, o));
+          updatedOrders.forEach((o) => orderMap.set(o.orderNumber || o.id, o));
+          return Array.from(orderMap.values());
+        });
+      }
+
+      // Cross-tab real-time subscriptions synchronization
+      const updatedSubs = getStoredData<MilkSubscription[]>('savera_subscriptions_v3', []);
+      if (updatedSubs.length > 0) {
+        setSubscriptions((prev) => {
+          const subMap = new Map<string, MilkSubscription>();
+          prev.forEach((s) => subMap.set(s.id, s));
+          updatedSubs.forEach((s) => subMap.set(s.id, s));
+          return Array.from(subMap.values());
+        });
+      }
     };
 
     window.addEventListener('storage', handleSync);
     window.addEventListener('savera-products-updated', handleSync);
+    window.addEventListener('savera-orders-updated', handleSync);
+    window.addEventListener('savera-subscriptions-updated', handleSync);
     window.addEventListener('focus', handleSync);
 
     const rawCart = getStoredData<OrderItem[]>('savera_cart_v2', []);
@@ -287,9 +320,137 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('savera-products-updated', handleSync);
+      window.removeEventListener('savera-orders-updated', handleSync);
+      window.removeEventListener('savera-subscriptions-updated', handleSync);
       window.removeEventListener('focus', handleSync);
     };
   }, []);
+
+  const refreshOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data && !error) {
+        const fetchedOrders: Order[] = data.map((d: any) => ({
+          id: d.id,
+          orderNumber: d.order_number,
+          customerId: d.user_id || d.delivery_address?.customer_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
+          customerName: d.customer_name || 'Savera Customer',
+          customerPhone: d.customer_phone || '',
+          customerEmail: d.customer_email || d.delivery_address?.customer_email || d.delivery_address?.email || '',
+          items: d.items || [],
+          subtotal: Number(d.subtotal) || 0,
+          deliveryFee: Number(d.delivery_fee) || 0,
+          discount: Number(d.discount) || 0,
+          tax: 0,
+          totalAmount: Number(d.total_amount) || 0,
+          paymentMethod: (d.payment_method as any) || 'UPI',
+          paymentStatus: (d.payment_status as any) || 'Paid',
+          deliveryAddress: d.delivery_address || {},
+          deliveryDate: d.delivery_date || '',
+          deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
+          status: (d.status as any) || 'Order Placed',
+          driverName: d.driver_name || d.delivery_address?.driver_name || ((d.delivery_address?.pincode || '').startsWith('16') ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)'),
+          driverPhone: d.driver_phone || d.delivery_address?.driver_phone || ((d.delivery_address?.pincode || '').startsWith('16') ? '+91 98222 33445' : '+91 98111 22334'),
+          otp: d.otp || '4821',
+          createdAt: d.created_at || new Date().toISOString(),
+          updatedAt: d.created_at || new Date().toISOString(),
+        }));
+
+        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
+        const activeOrders = baselineTime
+          ? fetchedOrders.filter((o) => o.createdAt >= baselineTime)
+          : fetchedOrders;
+
+        setOrders((prevOrders) => {
+          const orderMap = new Map<string, Order>();
+          prevOrders.forEach((o) => {
+            if (!baselineTime || o.createdAt >= baselineTime) {
+              orderMap.set(o.orderNumber || o.id, o);
+            }
+          });
+          activeOrders.forEach((o) => {
+            const key = o.orderNumber || o.id;
+            orderMap.set(key, { ...(orderMap.get(key) || {}), ...o });
+          });
+          const merged = Array.from(orderMap.values());
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('savera_orders_v3', JSON.stringify(merged));
+            if (user?.id) {
+              localStorage.setItem(`savera_user_orders_${user.id}`, JSON.stringify(merged.filter(o => o.customerId === user.id || (o.customerEmail && o.customerEmail.toLowerCase() === (user.email || '').toLowerCase()))));
+            }
+          }
+          return merged;
+        });
+      }
+    } catch (e) {}
+  };
+
+  const refreshSubscriptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data && !error) {
+        const effectiveProducts = computeEffectiveProducts();
+        const milkProduct = effectiveProducts.find((p) => p.isSubscriptionEligible) || effectiveProducts[0];
+        const defaultMilkPrice = milkProduct?.variants[0]?.price || 100;
+
+        const fetchedSubs: MilkSubscription[] = data.map((d: any) => ({
+          id: d.id,
+          customerId: d.user_id || d.delivery_address?.customer_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
+          customerName: d.customer_name || 'Savera Member',
+          customerPhone: d.customer_phone || '',
+          productId: d.product_id || milkProduct?.id || 'prod-a2-milk',
+          productName: d.product_name || milkProduct?.name || 'A2 Desi Cow Milk',
+          variantId: d.variant_id || milkProduct?.variants[0]?.id || 'var-a2m-1l',
+          variantName: d.variant_name || milkProduct?.variants[0]?.name || '1 Litre Glass Bottle',
+          quantityPerDelivery: d.quantity || 1,
+          pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : defaultMilkPrice,
+          frequency: (d.schedule_type as any) || 'Daily',
+          customDays: d.custom_days || [],
+          deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
+          deliveryAddress: d.delivery_address || {},
+          startDate: d.start_date || new Date().toISOString().split('T')[0],
+          status: (d.status as any) || 'Active',
+          skippedDates: [],
+          nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          monthlyEstimate: Number(d.monthly_cost) || (30 * defaultMilkPrice * (d.quantity || 1)),
+        }));
+
+        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
+        const activeSubs = baselineTime
+          ? fetchedSubs.filter((s) => s.startDate >= baselineTime.split('T')[0])
+          : fetchedSubs;
+
+        setSubscriptions((prevSubs) => {
+          const subMap = new Map<string, MilkSubscription>();
+          prevSubs.forEach((s) => {
+            if (!baselineTime || s.startDate >= baselineTime.split('T')[0]) {
+              subMap.set(s.id, s);
+            }
+          });
+          activeSubs.forEach((s) => {
+            const key = s.id;
+            subMap.set(key, { ...(subMap.get(key) || {}), ...s });
+          });
+          const merged = Array.from(subMap.values());
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('savera_subscriptions_v3', JSON.stringify(merged));
+            if (user?.id) {
+              localStorage.setItem(`savera_user_subs_${user.id}`, JSON.stringify(merged.filter(s => s.customerId === user.id)));
+            }
+          }
+          return merged;
+        });
+      }
+    } catch (e) {}
+  };
 
   // Synchronize authenticated user identity, orders, and subscriptions
   useEffect(() => {
@@ -354,153 +515,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       });
 
-      const isTeamAdmin = profile?.role === 'admin' || user.email === 'admin@saverafarms.com' || user.email === 'operations@saverafarms.com' || user.email === 'manager@saverafarms.com';
-      const isTeamRider = profile?.role === 'rider' || (user.email && user.email.includes('rider'));
-
-      // 1. Fetch orders from Supabase
-      // Team Admins and Riders fetch all platform orders for complete oversight and dispatch
-      // Standard customers fetch their own scoped orders
-      let ordersQuery = supabase.from('orders').select('*');
-      if (!isTeamAdmin && !isTeamRider) {
-        ordersQuery = ordersQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
-      }
-
-      ordersQuery
-        .order('created_at', { ascending: false })
-        .then(({ data, error }) => {
-          if (data && !error) {
-            const fetchedUserOrders: Order[] = data.map((d: any) => ({
-              id: d.id,
-              orderNumber: d.order_number,
-              customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
-              customerName: d.customer_name || 'Savera Customer',
-              customerPhone: d.customer_phone || '',
-              customerEmail: d.customer_email || '',
-              items: d.items || [],
-              subtotal: Number(d.subtotal) || 0,
-              deliveryFee: Number(d.delivery_fee) || 0,
-              discount: Number(d.discount) || 0,
-              tax: 0,
-              totalAmount: Number(d.total_amount) || 0,
-              paymentMethod: (d.payment_method as any) || 'UPI',
-              paymentStatus: (d.payment_status as any) || 'Paid',
-              deliveryAddress: d.delivery_address || {},
-              deliveryDate: d.delivery_date || '',
-              deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
-              status: (d.status as any) || 'Order Placed',
-              driverName: d.driver_name || d.delivery_address?.driver_name || ((d.delivery_address?.pincode || '').startsWith('16') ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)'),
-              driverPhone: d.driver_phone || d.delivery_address?.driver_phone || ((d.delivery_address?.pincode || '').startsWith('16') ? '+91 98222 33445' : '+91 98111 22334'),
-              otp: d.otp || '4821',
-              createdAt: d.created_at || new Date().toISOString(),
-              updatedAt: d.created_at || new Date().toISOString(),
-            }));
-
-            const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
-            const activeOrders = baselineTime
-              ? fetchedUserOrders.filter((o) => o.createdAt >= baselineTime)
-              : fetchedUserOrders;
-
-            // Safely merge Supabase orders with existing local orders
-            setOrders((prevOrders) => {
-              const orderMap = new Map<string, Order>();
-              prevOrders.forEach((o) => {
-                if (!baselineTime || o.createdAt >= baselineTime) {
-                  orderMap.set(o.orderNumber || o.id, o);
-                }
-              });
-              localUserOrders.forEach((o) => {
-                const key = o.orderNumber || o.id;
-                if (!orderMap.has(key)) orderMap.set(key, o);
-              });
-              activeOrders.forEach((o) => {
-                const key = o.orderNumber || o.id;
-                if (orderMap.has(key)) {
-                  orderMap.set(key, { ...orderMap.get(key)!, ...o });
-                } else {
-                  orderMap.set(key, o);
-                }
-              });
-              const merged = Array.from(orderMap.values());
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('savera_orders_v3', JSON.stringify(merged));
-                if (!isTeamAdmin && !isTeamRider) {
-                  localStorage.setItem(userOrdersKey, JSON.stringify(merged.filter(o => o.customerId === user.id || o.customerEmail?.toLowerCase() === realEmail.toLowerCase())));
-                }
-              }
-              return merged;
-            });
-
-            if (!isTeamAdmin && !isTeamRider) {
-              setCustomer((c) => ({
-                ...c,
-                totalOrders: activeOrders.length || c.totalOrders,
-                totalSpent: activeOrders.reduce((sum, o) => sum + (o.paymentStatus === 'Paid' ? o.totalAmount : 0), 0) || c.totalSpent,
-              }));
-            }
-          }
-        });
-
-      // 2. Fetch subscriptions from Supabase
-      let subsQuery = supabase.from('subscriptions').select('*');
-      if (!isTeamAdmin) {
-        subsQuery = subsQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
-      }
-
-      subsQuery
-        .order('created_at', { ascending: false })
-        .then(({ data, error }) => {
-          if (data && !error) {
-            const fetchedUserSubs: MilkSubscription[] = data.map((d: any) => ({
-              id: d.id,
-              customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
-              customerName: d.customer_name || 'Savera Member',
-              customerPhone: d.customer_phone || '',
-              productId: d.product_id,
-              productName: d.product_name,
-              variantId: d.variant_id || 'var-1L',
-              variantName: d.variant_name || '1 Litre Glass Bottle',
-              quantityPerDelivery: d.quantity || 1,
-              pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : 95,
-              frequency: (d.schedule_type as any) || 'Daily',
-              customDays: d.custom_days || [],
-              deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
-              deliveryAddress: d.delivery_address || {},
-              startDate: d.start_date || new Date().toISOString().split('T')[0],
-              status: (d.status as any) || 'Active',
-              skippedDates: [],
-              nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-              monthlyEstimate: Number(d.monthly_cost) || 2850,
-            }));
-
-            const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
-            const activeSubs = baselineTime
-              ? fetchedUserSubs.filter((s) => s.startDate >= baselineTime.split('T')[0])
-              : fetchedUserSubs;
-
-            setSubscriptions((prevSubs) => {
-              const subMap = new Map<string, MilkSubscription>();
-              prevSubs.forEach((s) => subMap.set(s.id, s));
-              localUserSubs.forEach((s) => {
-                if (!subMap.has(s.id)) subMap.set(s.id, s);
-              });
-              activeSubs.forEach((s) => {
-                if (subMap.has(s.id)) {
-                  subMap.set(s.id, { ...subMap.get(s.id)!, ...s });
-                } else {
-                  subMap.set(s.id, s);
-                }
-              });
-              const merged = Array.from(subMap.values());
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('savera_subscriptions_v3', JSON.stringify(merged));
-                if (!isTeamAdmin) {
-                  localStorage.setItem(userSubsKey, JSON.stringify(merged.filter(s => s.customerId === user.id)));
-                }
-              }
-              return merged;
-            });
-          }
-        });
+      // Synchronize latest live orders and subscriptions from database
+      refreshOrders();
+      refreshSubscriptions();
     } else {
       setCustomer({
         id: 'cust-guest',
@@ -894,7 +911,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         user_id: validDbUserId,
         customer_name: newSub.customerName,
         customer_phone: newSub.customerPhone,
-        delivery_address: newSub.deliveryAddress || customer.addresses[0] || {},
+        delivery_address: {
+          ...(newSub.deliveryAddress || customer.addresses[0] || {}),
+          customer_email: user?.email || customer.email || '',
+          customer_id: resolvedCustomerId,
+        },
         product_id: newSub.productId,
         product_name: newSub.productName,
         variant_id: newSub.variantId,
@@ -910,6 +931,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (error) console.warn('Supabase subscription sync note:', error.message);
       });
     } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-subscriptions-updated'));
+    }
   };
 
   const togglePauseSubscription = (subId: string) => {
@@ -926,6 +951,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return s;
       })
     );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-subscriptions-updated'));
+    }
   };
 
   const skipSubscriptionDate = (subId: string, dateStr: string) => {
@@ -940,6 +968,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return s;
       })
     );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-subscriptions-updated'));
+    }
   };
 
   const cancelSubscription = (subId: string) => {
@@ -948,6 +979,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     addToast('Subscription Cancelled', 'Your milk subscription has been cancelled.', 'info');
     logAuditAction('Subscription Cancelled', subId, 'Customer cancelled subscription');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-subscriptions-updated'));
+    }
     try {
       supabase.from('subscriptions').update({ status: 'Cancelled' }).eq('id', subId).then();
     } catch (e) {}
@@ -959,6 +993,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     addToast('Subscription Updated', 'Delivery preferences updated successfully.', 'success');
     logAuditAction('Subscription Modified', subId, 'Updated parameters');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-subscriptions-updated'));
+    }
     try {
       const dbUpdates: any = {};
       if (updates.status) dbUpdates.status = updates.status;
@@ -1094,6 +1131,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         customer_phone: newOrder.customerPhone,
         delivery_address: {
           ...(newOrder.deliveryAddress || {}),
+          customer_email: newOrder.customerEmail,
+          customer_id: newOrder.customerId,
           driver_name: newOrder.driverName,
           driver_phone: newOrder.driverPhone,
         },
@@ -1113,19 +1152,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     } catch (e) {}
 
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('savera-orders-updated'));
+    }
+
     return newOrder;
   };
 
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id === orderId) {
+    setOrders((prev) => {
+      const updated = prev.map((o) => {
+        if (o.id === orderId || o.orderNumber === orderId) {
           const updatedPaymentStatus = (status === 'Delivered' && o.paymentMethod === 'Cash on Delivery') ? 'Paid' as const : o.paymentStatus;
           return { ...o, status, paymentStatus: updatedPaymentStatus, updatedAt: new Date().toISOString() };
         }
         return o;
-      })
-    );
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_orders_v3', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('savera-orders-updated'));
+      }
+      return updated;
+    });
     addToast('Order Status Updated', `Order ${orderId} marked as ${status}.`, 'info');
     logAuditAction('Order Status Change', orderId, `Updated status to ${status}`);
     try {
@@ -1156,136 +1204,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAuditAction('System Reset', 'Platform Baseline', 'Super Admin reset orders & revenue to zero');
   };
 
-  const refreshOrders = async () => {
-    try {
-      const isTeamAdmin = profile?.role === 'admin' || user?.email === 'admin@saverafarms.com' || user?.email === 'operations@saverafarms.com' || user?.email === 'manager@saverafarms.com';
-      const isTeamRider = profile?.role === 'rider' || (user?.email && user.email.includes('rider'));
-
-      let ordersQuery = supabase.from('orders').select('*');
-      if (!isTeamAdmin && !isTeamRider && user) {
-        const realName = profile?.full_name || (user.user_metadata as any)?.full_name || user.email?.split('@')[0] || '';
-        const realPhone = profile?.phone || (user.user_metadata as any)?.phone || '';
-        ordersQuery = ordersQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
-      }
-
-      const { data, error } = await ordersQuery.order('created_at', { ascending: false });
-      if (data && !error) {
-        const fetchedOrders: Order[] = data.map((d: any) => ({
-          id: d.id,
-          orderNumber: d.order_number,
-          customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
-          customerName: d.customer_name || 'Savera Customer',
-          customerPhone: d.customer_phone || '',
-          customerEmail: d.customer_email || '',
-          items: d.items || [],
-          subtotal: Number(d.subtotal) || 0,
-          deliveryFee: Number(d.delivery_fee) || 0,
-          discount: Number(d.discount) || 0,
-          tax: 0,
-          totalAmount: Number(d.total_amount) || 0,
-          paymentMethod: (d.payment_method as any) || 'UPI',
-          paymentStatus: (d.payment_status as any) || 'Paid',
-          deliveryAddress: d.delivery_address || {},
-          deliveryDate: d.delivery_date || '',
-          deliverySlot: d.delivery_slot || '5:00 AM - 7:00 AM',
-          status: (d.status as any) || 'Order Placed',
-          driverName: d.driver_name || d.delivery_address?.driver_name || ((d.delivery_address?.pincode || '').startsWith('16') ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)'),
-          driverPhone: d.driver_phone || d.delivery_address?.driver_phone || ((d.delivery_address?.pincode || '').startsWith('16') ? '+91 98222 33445' : '+91 98111 22334'),
-          otp: d.otp || '4821',
-          createdAt: d.created_at || new Date().toISOString(),
-          updatedAt: d.created_at || new Date().toISOString(),
-        }));
-
-        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
-        const activeOrders = baselineTime
-          ? fetchedOrders.filter((o) => o.createdAt >= baselineTime)
-          : fetchedOrders;
-
-        setOrders((prevOrders) => {
-          const orderMap = new Map<string, Order>();
-          prevOrders.forEach((o) => {
-            if (!baselineTime || o.createdAt >= baselineTime) {
-              orderMap.set(o.orderNumber || o.id, o);
-            }
-          });
-          activeOrders.forEach((o) => {
-            const key = o.orderNumber || o.id;
-            orderMap.set(key, { ...(orderMap.get(key) || {}), ...o });
-          });
-          const merged = Array.from(orderMap.values());
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('savera_orders_v3', JSON.stringify(merged));
-          }
-          return merged;
-        });
-      }
-    } catch (e) {}
-  };
-
-  const refreshSubscriptions = async () => {
-    try {
-      const isTeamAdmin = profile?.role === 'admin' || user?.email === 'admin@saverafarms.com' || user?.email === 'operations@saverafarms.com' || user?.email === 'manager@saverafarms.com';
-
-      let subsQuery = supabase.from('subscriptions').select('*');
-      if (!isTeamAdmin && user) {
-        const realName = profile?.full_name || (user.user_metadata as any)?.full_name || user.email?.split('@')[0] || '';
-        const realPhone = profile?.phone || (user.user_metadata as any)?.phone || '';
-        subsQuery = subsQuery.or(`user_id.eq.${user.id},customer_name.eq.${realName},customer_phone.eq.${realPhone}`);
-      }
-
-      const { data, error } = await subsQuery.order('created_at', { ascending: false });
-      if (data && !error) {
-        const fetchedSubs: MilkSubscription[] = data.map((d: any) => ({
-          id: d.id,
-          customerId: d.user_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
-          customerName: d.customer_name || 'Savera Member',
-          customerPhone: d.customer_phone || '',
-          productId: d.product_id,
-          productName: d.product_name,
-          variantId: d.variant_id || 'var-1L',
-          variantName: d.variant_name || '1 Litre Glass Bottle',
-          quantityPerDelivery: d.quantity || 1,
-          pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : 95,
-          frequency: (d.schedule_type as any) || 'Daily',
-          customDays: d.custom_days || [],
-          deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
-          deliveryAddress: d.delivery_address || {},
-          startDate: d.start_date || new Date().toISOString().split('T')[0],
-          status: (d.status as any) || 'Active',
-          skippedDates: [],
-          nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-          monthlyEstimate: Number(d.monthly_cost) || 2850,
-        }));
-
-        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
-        const activeSubs = baselineTime
-          ? fetchedSubs.filter((s) => s.startDate >= baselineTime.split('T')[0])
-          : fetchedSubs;
-
-        setSubscriptions((prevSubs) => {
-          const subMap = new Map<string, MilkSubscription>();
-          prevSubs.forEach((s) => subMap.set(s.id, s));
-          activeSubs.forEach((s) => {
-            if (subMap.has(s.id)) {
-              subMap.set(s.id, { ...subMap.get(s.id)!, ...s });
-            } else {
-              subMap.set(s.id, s);
-            }
-          });
-          const merged = Array.from(subMap.values());
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('savera_subscriptions_v3', JSON.stringify(merged));
-          }
-          return merged;
-        });
-      }
-    } catch (e) {}
-  };
-
   const cancelOrder = (orderId: string, reason?: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: 'Cancelled' as const, updatedAt: new Date().toISOString() } : o))
-    );
+    setOrders((prev) => {
+      const updated = prev.map((o) => (o.id === orderId || o.orderNumber === orderId ? { ...o, status: 'Cancelled' as const, updatedAt: new Date().toISOString() } : o));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savera_orders_v3', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('savera-orders-updated'));
+      }
+      return updated;
+    });
     addToast('Order Cancelled', `Order ${orderId} has been cancelled.`, 'info');
     logAuditAction('Order Cancelled', orderId, reason || 'Customer requested cancellation');
     try {
