@@ -28,7 +28,7 @@ export default function FarmStoryPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="relative h-96 rounded-3xl overflow-hidden shadow-card border-4 border-white">
             <Image
-              src="/images/gir-cows-grazing.png"
+              src="/images/gir-cows-grazing.jpg"
               alt="Desi Gir Cow at Savera Farms"
               fill
               className="object-cover"

@@ -119,8 +119,8 @@ export default function HomePage() {
               <div className="relative rounded-3xl overflow-hidden shadow-floating border-4 border-white bg-white group">
                 <div className="relative h-[440px] w-full">
                   <Image
-                    src="/images/farm-hero.png"
-                    alt="Savera Farms A2 Desi Cow Milk"
+                    src="/images/farm-hero.jpg"
+                    alt="Savera Farms Authentic Desi Gir & Sahiwal Cows"
                     fill
                     priority
                     className="object-cover group-hover:scale-105 transition duration-700"
@@ -358,8 +358,8 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="relative h-96 rounded-3xl overflow-hidden shadow-card border-4 border-white">
               <Image
-                src="/images/gir-cows-grazing.png"
-                alt="Savera Farms Desi Cows"
+                src="/images/gir-cows-grazing.jpg"
+                alt="Savera Farms Desi Gir and Sahiwal Cows"
                 fill
                 className="object-cover"
               />
