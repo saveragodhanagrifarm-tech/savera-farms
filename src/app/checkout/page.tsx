@@ -43,8 +43,13 @@ export default function CheckoutPage() {
     deliveryFee,
     cartTotal,
     appliedCoupon,
+    syncCatalogFromCloud,
     addToast,
   } = useApp();
+
+  useEffect(() => {
+    syncCatalogFromCloud();
+  }, []);
 
   const { user, profile, openAuthModal } = useAuth();
   const [guestEmail, setGuestEmail] = useState(user?.email || customer.email || '');
@@ -129,18 +134,51 @@ export default function CheckoutPage() {
 
   const handleCompleteCheckout = () => {
     const effectiveEmail = user?.email || profile?.email || guestEmail || customer.email;
-    const baseAddress = selectedAddress || {
-      id: 'addr-temp',
-      fullName: fullName || profile?.full_name || customer.fullName || 'Customer',
-      mobileNumber: mobileNumber || profile?.phone || customer.phone || '+91 98765 43210',
-      houseFlat: houseFlat || 'House 14',
-      street: street || 'Main Boulevard',
-      area: area || 'Sector 9',
-      city,
-      state,
-      pincode,
-      type: addressType,
-    };
+    let baseAddress = selectedAddress;
+
+    if (showAddressForm && houseFlat.trim() && street.trim()) {
+      const areaVal = area.trim() || street.trim();
+      const newId = addAddress({
+        fullName: fullName.trim() || profile?.full_name || customer.fullName || 'Customer',
+        mobileNumber: mobileNumber.trim() || profile?.phone || customer.phone || '+91 98765 43210',
+        houseFlat: houseFlat.trim(),
+        street: street.trim(),
+        area: areaVal,
+        landmark: landmark.trim(),
+        city,
+        state,
+        pincode,
+        type: addressType,
+      });
+      setSelectedAddressId(newId);
+      baseAddress = {
+        id: newId,
+        fullName: fullName.trim() || profile?.full_name || customer.fullName || 'Customer',
+        mobileNumber: mobileNumber.trim() || profile?.phone || customer.phone || '+91 98765 43210',
+        houseFlat: houseFlat.trim(),
+        street: street.trim(),
+        area: areaVal,
+        landmark: landmark.trim(),
+        city,
+        state,
+        pincode,
+        type: addressType,
+      };
+    } else if (!baseAddress) {
+      baseAddress = {
+        id: 'addr-temp',
+        fullName: fullName || profile?.full_name || customer.fullName || 'Customer',
+        mobileNumber: mobileNumber || profile?.phone || customer.phone || '+91 98765 43210',
+        houseFlat: houseFlat || 'Doorstep Delivery',
+        street: street || 'Main Boulevard',
+        area: area || 'Sector 9',
+        city,
+        state,
+        pincode,
+        type: addressType,
+      };
+    }
+
     const addressToUse = {
       ...baseAddress,
       customer_email: effectiveEmail,

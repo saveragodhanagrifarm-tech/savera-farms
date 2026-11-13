@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { ProductCard } from '@/components/shop/ProductCard';
@@ -35,7 +35,12 @@ export default function CartPage() {
     applyCoupon,
     removeCoupon,
     products,
+    syncCatalogFromCloud,
   } = useApp();
+
+  useEffect(() => {
+    syncCatalogFromCloud();
+  }, []);
 
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');

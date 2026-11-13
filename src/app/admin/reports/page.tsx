@@ -16,6 +16,8 @@ export default function AdminReportsPage() {
     addToast,
   } = useApp();
 
+  const customerOrders = orders.filter((o) => o.id !== 'SYS-CATALOG-OVERRIDES');
+
   const exportCSV = (type: string, data: any[]) => {
     if (!data || data.length === 0) {
       addToast('No Data', `No records found to export for ${type}.`, 'info');
@@ -66,11 +68,11 @@ export default function AdminReportsPage() {
             </div>
           </div>
           <button
-            onClick={() => exportCSV('customer_orders', orders)}
+            onClick={() => exportCSV('customer_orders', customerOrders)}
             className="w-full bg-emerald-950 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-300 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition"
           >
             <Download className="w-4 h-4" />
-            <span>Export Orders ({orders.length} Rows)</span>
+            <span>Export Orders ({customerOrders.length} Rows)</span>
           </button>
         </div>
 

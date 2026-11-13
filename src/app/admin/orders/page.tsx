@@ -14,7 +14,7 @@ export default function AdminOrdersPage() {
     refreshOrders();
   }, []);
 
-  const filteredOrders = orders.filter((o) => filterStatus === 'All' || o.status === filterStatus);
+  const filteredOrders = orders.filter((o) => o.id !== 'SYS-CATALOG-OVERRIDES' && (filterStatus === 'All' || o.status === filterStatus));
 
   const statusOptions: OrderStatus[] = [
     'Order Placed',

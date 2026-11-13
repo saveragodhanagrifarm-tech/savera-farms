@@ -88,7 +88,7 @@ export default function SubscriptionsPage() {
     if (s.customerId && (s.customerId === user.id || s.customerId.toLowerCase() === userEmail)) return true;
 
     // 2. Email matching (top-level or inside deliveryAddress JSONB)
-    const sEmail = ((s.deliveryAddress as any)?.customer_email || (s.deliveryAddress as any)?.email || '').toLowerCase().trim();
+    const sEmail = (s.customerEmail || (s.deliveryAddress as any)?.customer_email || (s.deliveryAddress as any)?.email || '').toLowerCase().trim();
     if (userEmail && sEmail && sEmail === userEmail) return true;
 
     // 3. Name matching

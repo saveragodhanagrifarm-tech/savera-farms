@@ -1291,10 +1291,11 @@ export default function AdminDashboardPage() {
   // ==========================================
   // VIEW 6: SUPER ADMIN & EXECUTIVE CONTROL VIEW
   // ==========================================
-  const totalRevenue = orders
+  const realOrders = orders.filter((o) => o.id !== 'SYS-CATALOG-OVERRIDES');
+  const totalRevenue = realOrders
     .filter((o) => o.paymentStatus === 'Paid' && o.status !== 'Cancelled' && o.status !== 'Refunded')
     .reduce((sum, o) => sum + o.totalAmount, 0);
-  const ordersToday = orders.length;
+  const ordersToday = realOrders.length;
   const activeSubsCount = subscriptions.filter((s) => s.status === 'Active').length;
   const dailyMilkVolume = subscriptions
     .filter((s) => s.status === 'Active')
@@ -1452,14 +1453,14 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
-                {orders.length === 0 ? (
+                {realOrders.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-500">
                       No customer orders yet. When a customer places an order, it will appear here in real time.
                     </td>
                   </tr>
                 ) : (
-                  orders.slice(0, 8).map((ord) => (
+                  realOrders.slice(0, 8).map((ord) => (
                     <tr key={ord.id} className="hover:bg-slate-900/50">
                       <td className="p-3 font-mono font-bold text-white">{ord.orderNumber}</td>
                       <td className="p-3 font-semibold">{ord.customerName}</td>

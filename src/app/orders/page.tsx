@@ -45,6 +45,7 @@ export default function CustomerOrdersPage() {
   const userPhoneClean = (profile?.phone || '').replace(/[^0-9]/g, '');
 
   const myOrders = orders.filter((o) => {
+    if (o.id === 'SYS-CATALOG-OVERRIDES') return false;
     if (isAdmin) return true;
     if (!user) return false;
 

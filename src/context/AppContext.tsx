@@ -983,12 +983,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const resolvedCustomerId = user?.id || customer.id || 'cust-user';
     const resolvedCustomerName = subData.customerName || profile?.full_name || customer.fullName || 'Customer';
     const resolvedCustomerPhone = subData.customerPhone || profile?.phone || customer.phone || '';
+    const resolvedCustomerEmail = subData.customerEmail || user?.email || profile?.email || customer.email || '';
 
     const newSub: MilkSubscription = {
       ...subData,
       customerId: resolvedCustomerId,
       customerName: resolvedCustomerName,
       customerPhone: resolvedCustomerPhone,
+      customerEmail: resolvedCustomerEmail,
       id: 'SUB-' + Math.floor(1000 + Math.random() * 9000),
       startDate: new Date().toISOString().split('T')[0],
       status: 'Active',
@@ -1022,7 +1024,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         customer_phone: newSub.customerPhone,
         delivery_address: {
           ...(newSub.deliveryAddress || customer.addresses[0] || {}),
-          customer_email: user?.email || customer.email || '',
+          customer_email: resolvedCustomerEmail,
           customer_id: resolvedCustomerId,
         },
         product_id: newSub.productId,
@@ -1256,6 +1258,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         delivery_date: newOrder.deliveryDate,
         delivery_slot: newOrder.deliverySlot,
         otp: newOrder.otp,
+        driver_name: newOrder.driverName,
+        driver_phone: newOrder.driverPhone,
       }).then(({ error }) => {
         if (error) console.warn('Supabase order sync note:', error.message);
       });
@@ -1269,11 +1273,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
+    let updatedPaymentStatus: Order['paymentStatus'] | undefined = undefined;
     setOrders((prev) => {
       const updated = prev.map((o) => {
         if (o.id === orderId || o.orderNumber === orderId) {
-          const updatedPaymentStatus = (status === 'Delivered' && o.paymentMethod === 'Cash on Delivery') ? 'Paid' as const : o.paymentStatus;
-          return { ...o, status, paymentStatus: updatedPaymentStatus, updatedAt: new Date().toISOString() };
+          const isCodDelivered = (status === 'Delivered' && o.paymentMethod === 'Cash on Delivery');
+          const pStatus = isCodDelivered ? 'Paid' as const : o.paymentStatus;
+          updatedPaymentStatus = pStatus;
+          return { ...o, status, paymentStatus: pStatus, updatedAt: new Date().toISOString() };
         }
         return o;
       });
@@ -1286,7 +1293,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Order Status Updated', `Order ${orderId} marked as ${status}.`, 'info');
     logAuditAction('Order Status Change', orderId, `Updated status to ${status}`);
     try {
-      supabase.from('orders').update({ status }).or(`id.eq.${orderId},order_number.eq.${orderId}`).then();
+      const updatePayload: any = { status };
+      if (status === 'Delivered') {
+        updatePayload.payment_status = 'Paid';
+      }
+      supabase.from('orders').update(updatePayload).or(`id.eq.${orderId},order_number.eq.${orderId}`).then();
     } catch (e) {}
   };
 

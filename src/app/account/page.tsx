@@ -49,8 +49,17 @@ export default function CustomerAccountPage() {
     rechargeWallet,
     walletTransactions,
     updateCustomerProfile,
+    refreshOrders,
+    refreshSubscriptions,
     addToast,
   } = useApp();
+
+  useEffect(() => {
+    if (user) {
+      refreshOrders();
+      refreshSubscriptions();
+    }
+  }, [user]);
 
   const [copied, setCopied] = useState(false);
 
@@ -164,11 +173,11 @@ export default function CustomerAccountPage() {
   const normPhone = activePhone.replace(/[^0-9]/g, '');
 
   const userOrders = orders.filter((o) => {
+    if (o.id === 'SYS-CATALOG-OVERRIDES') return false;
     if (o.customerId === user.id) return true;
-    if (normEmail) {
-      if (o.customerId && o.customerId.toLowerCase().trim() === normEmail) return true;
-      if (o.customerEmail && o.customerEmail.toLowerCase().trim() === normEmail) return true;
-    }
+    const oEmail = (o.customerEmail || (o.deliveryAddress as any)?.customer_email || (o.deliveryAddress as any)?.email || '').toLowerCase().trim();
+    if (normEmail && oEmail && oEmail === normEmail) return true;
+    if (normEmail && o.customerId && o.customerId.toLowerCase().trim() === normEmail) return true;
     const oName = (o.customerName || '').toLowerCase().trim();
     if (normName && oName && (oName === normName || oName.includes(normName) || normName.includes(oName))) return true;
     const oPhone = (o.customerPhone || '').replace(/[^0-9]/g, '');
@@ -178,6 +187,8 @@ export default function CustomerAccountPage() {
 
   const userSubscriptions = subscriptions.filter((s) => {
     if (s.customerId === user.id) return true;
+    const sEmail = (s.customerEmail || (s.deliveryAddress as any)?.customer_email || (s.deliveryAddress as any)?.email || '').toLowerCase().trim();
+    if (normEmail && sEmail && sEmail === normEmail) return true;
     if (normEmail && s.customerId && s.customerId.toLowerCase().trim() === normEmail) return true;
     const sName = (s.customerName || '').toLowerCase().trim();
     if (normName && sName && (sName === normName || sName.includes(normName) || normName.includes(sName))) return true;
