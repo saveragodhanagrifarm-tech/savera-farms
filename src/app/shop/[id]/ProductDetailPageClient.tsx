@@ -32,7 +32,11 @@ import { SEED_PRODUCTS } from '@/lib/db';
 export default function ProductDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { products, addToCart, reviews, addReview } = useApp();
+  const { products, addToCart, reviews, addReview, syncCatalogFromCloud } = useApp();
+
+  useEffect(() => {
+    syncCatalogFromCloud();
+  }, []);
 
   const product =
     products.find((p) => p.id === id) ||

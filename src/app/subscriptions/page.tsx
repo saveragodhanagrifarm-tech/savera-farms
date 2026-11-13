@@ -36,6 +36,7 @@ export default function SubscriptionsPage() {
     cancelSubscription,
     updateSubscription,
     refreshSubscriptions,
+    syncCatalogFromCloud,
     products,
   } = useApp();
 
@@ -46,6 +47,7 @@ export default function SubscriptionsPage() {
 
   useEffect(() => {
     refreshSubscriptions();
+    syncCatalogFromCloud();
   }, []);
 
   // Edit Subscription Form State
@@ -160,7 +162,7 @@ export default function SubscriptionsPage() {
           <button
             onClick={async () => {
               setIsRefreshing(true);
-              await refreshSubscriptions();
+              await Promise.all([refreshSubscriptions(), syncCatalogFromCloud()]);
               setIsRefreshing(false);
             }}
             disabled={isRefreshing}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Product, ProductVariant, CategoryType } from '@/types';
 import {
@@ -20,6 +20,7 @@ import {
   Check,
   Percent,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 
 const CATEGORIES: CategoryType[] = [
@@ -35,10 +36,17 @@ const CATEGORIES: CategoryType[] = [
 ];
 
 export default function AdminProductsPage() {
-  const { products, addProduct, updateProduct, updateProductPrice, deleteProduct, addToast } = useApp();
+  const { products, addProduct, updateProduct, updateProductPrice, deleteProduct, syncCatalogFromCloud, addToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSavingQuickPrice, setIsSavingQuickPrice] = useState(false);
+  const [isSavingFullEdit, setIsSavingFullEdit] = useState(false);
+
+  useEffect(() => {
+    syncCatalogFromCloud();
+  }, []);
 
   // Quick Price Edit Modal State
   const [quickPriceModal, setQuickPriceModal] = useState<{
@@ -83,36 +91,51 @@ export default function AdminProductsPage() {
   const totalVariants = products.reduce((acc, p) => acc + p.variants.length, 0);
   const subscriptionCount = products.filter((p) => p.isSubscriptionEligible).length;
 
-  const handleSaveQuickPrice = (e: React.FormEvent) => {
+  const handleSaveQuickPrice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickPriceModal) return;
 
-    updateProductPrice(
-      quickPriceModal.product.id,
-      quickPriceModal.variant.id,
-      quickPriceModal.newPrice,
-      quickPriceModal.newMrp,
-      quickPriceModal.newStock
-    );
-
-    setQuickPriceModal(null);
+    try {
+      setIsSavingQuickPrice(true);
+      await updateProductPrice(
+        quickPriceModal.product.id,
+        quickPriceModal.variant.id,
+        quickPriceModal.newPrice,
+        quickPriceModal.newMrp,
+        quickPriceModal.newStock
+      );
+      setQuickPriceModal(null);
+    } finally {
+      setIsSavingQuickPrice(false);
+    }
   };
 
-  const handleSaveFullEdit = (e: React.FormEvent) => {
+  const handleSaveFullEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editProductModal) return;
 
-    updateProduct(editProductModal.id, {
-      name: editProductModal.name,
-      tagline: editProductModal.tagline,
-      category: editProductModal.category,
-      description: editProductModal.description,
-      isSubscriptionEligible: editProductModal.isSubscriptionEligible,
-      isBestSeller: editProductModal.isBestSeller,
-      isFeatured: editProductModal.isFeatured,
-    });
+    try {
+      setIsSavingFullEdit(true);
+      await updateProduct(editProductModal.id, {
+        name: editProductModal.name,
+        tagline: editProductModal.tagline,
+        category: editProductModal.category,
+        description: editProductModal.description,
+        isSubscriptionEligible: editProductModal.isSubscriptionEligible,
+        isBestSeller: editProductModal.isBestSeller,
+        isFeatured: editProductModal.isFeatured,
+        variants: editProductModal.variants,
+      });
 
-    setEditProductModal(null);
+      // Ensure all variant overrides are updated in database
+      for (const v of editProductModal.variants) {
+        await updateProductPrice(editProductModal.id, v.id, v.price, v.mrp, v.stock);
+      }
+
+      setEditProductModal(null);
+    } finally {
+      setIsSavingFullEdit(false);
+    }
   };
 
   const handleCreateProduct = (e: React.FormEvent) => {
@@ -180,13 +203,29 @@ export default function AdminProductsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Product</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              setIsSyncing(true);
+              await syncCatalogFromCloud();
+              setIsSyncing(false);
+              addToast('Catalog Synced', 'Live products and prices synchronized from cloud.', 'success');
+            }}
+            disabled={isSyncing}
+            className="bg-slate-900 hover:bg-slate-800 text-savera-cream border border-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-savera-saffron ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'Syncing...' : 'Sync Live Prices'}</span>
+          </button>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Product</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -456,14 +495,23 @@ export default function AdminProductsPage() {
               <div className="pt-2 flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold py-2.5 rounded-xl transition shadow-md"
+                  disabled={isSavingQuickPrice}
+                  className="flex-1 bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold py-2.5 rounded-xl transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Save Live Price
+                  {isSavingQuickPrice ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving to Cloud...</span>
+                    </>
+                  ) : (
+                    <span>Save Live Price</span>
+                  )}
                 </button>
                 <button
                   type="button"
+                  disabled={isSavingQuickPrice}
                   onClick={() => setQuickPriceModal(null)}
-                  className="bg-slate-900 text-slate-400 hover:text-white px-4 py-2.5 rounded-xl border border-slate-800"
+                  className="bg-slate-900 text-slate-400 hover:text-white px-4 py-2.5 rounded-xl border border-slate-800 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -545,6 +593,72 @@ export default function AdminProductsPage() {
                 />
               </div>
 
+              {/* Variants, Pricing & Stock */}
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <span className="text-[10px] text-savera-saffron font-bold uppercase tracking-wider block">
+                  Product Variants, Selling Price & MRP
+                </span>
+                <div className="space-y-3">
+                  {editProductModal.variants.map((v, idx) => (
+                    <div key={v.id} className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold text-white">
+                        <span>{v.name} ({v.sku})</span>
+                        <span className="text-[10px] text-slate-400">{v.weightVolume}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-0.5">Selling Price (₹)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={v.price}
+                            onChange={(e) => {
+                              const newPrice = Number(e.target.value);
+                              const updatedVariants = [...editProductModal.variants];
+                              const discountPct = v.mrp > newPrice ? Math.round(((v.mrp - newPrice) / v.mrp) * 100) : 0;
+                              updatedVariants[idx] = { ...v, price: newPrice, discountPct };
+                              setEditProductModal({ ...editProductModal, variants: updatedVariants });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-bold text-xs focus:outline-none focus:border-savera-saffron"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-0.5">MRP Price (₹)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={v.mrp}
+                            onChange={(e) => {
+                              const newMrp = Number(e.target.value);
+                              const updatedVariants = [...editProductModal.variants];
+                              const discountPct = newMrp > v.price ? Math.round(((newMrp - v.price) / newMrp) * 100) : 0;
+                              updatedVariants[idx] = { ...v, mrp: newMrp, discountPct };
+                              setEditProductModal({ ...editProductModal, variants: updatedVariants });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-savera-saffron"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-0.5">Stock (units)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={v.stock}
+                            onChange={(e) => {
+                              const newStock = Number(e.target.value);
+                              const updatedVariants = [...editProductModal.variants];
+                              updatedVariants[idx] = { ...v, stock: newStock };
+                              setEditProductModal({ ...editProductModal, variants: updatedVariants });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-savera-saffron"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Toggles */}
               <div className="flex flex-wrap gap-4 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-slate-300">
@@ -575,14 +689,23 @@ export default function AdminProductsPage() {
               <div className="pt-3 border-t border-slate-800 flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold py-2.5 rounded-xl transition shadow-md"
+                  disabled={isSavingFullEdit}
+                  className="flex-1 bg-savera-saffron hover:bg-amber-500 text-savera-dark font-bold py-2.5 rounded-xl transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Save Product Changes
+                  {isSavingFullEdit ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving Changes to Cloud...</span>
+                    </>
+                  ) : (
+                    <span>Save Product Changes</span>
+                  )}
                 </button>
                 <button
                   type="button"
+                  disabled={isSavingFullEdit}
                   onClick={() => setEditProductModal(null)}
-                  className="bg-slate-900 text-slate-400 hover:text-white px-4 py-2.5 rounded-xl border border-slate-800"
+                  className="bg-slate-900 text-slate-400 hover:text-white px-4 py-2.5 rounded-xl border border-slate-800 disabled:opacity-50"
                 >
                   Cancel
                 </button>

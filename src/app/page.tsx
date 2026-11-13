@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useApp } from '@/context/AppContext';
@@ -27,11 +27,15 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { products } = useApp();
+  const { products, syncCatalogFromCloud } = useApp();
   const [selectedSubProduct, setSelectedSubProduct] = useState<{
     product: Product;
     variantId: string;
   } | null>(null);
+
+  useEffect(() => {
+    syncCatalogFromCloud();
+  }, []);
 
   const bestSellers = products.filter((p) => p.isBestSeller);
   const featuredProducts = products.filter((p) => p.isFeatured);

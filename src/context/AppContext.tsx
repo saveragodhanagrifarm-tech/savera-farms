@@ -103,15 +103,16 @@ interface AppContextType {
   cancelOrder: (orderId: string, reason?: string) => void;
   refreshOrders: () => Promise<void>;
   refreshSubscriptions: () => Promise<void>;
+  syncCatalogFromCloud: () => Promise<void>;
 
   // Admin Data & Management
   adminRole: AdminRole;
   setAdminRole: (role: AdminRole) => void;
   products: Product[];
-  addProduct: (product: Omit<Product, 'id'> | Product) => Product;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  updateProductPrice: (productId: string, variantId: string, newPrice: number, newMrp?: number, newStock?: number) => void;
-  deleteProduct: (id: string) => void;
+  addProduct: (product: Omit<Product, 'id'> | Product) => Promise<Product> | Product;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void> | void;
+  updateProductPrice: (productId: string, variantId: string, newPrice: number, newMrp?: number, newStock?: number) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void> | void;
   batches: BatchItem[];
   addBatch: (batch: Omit<BatchItem, 'id' | 'quantitySold' | 'status'>) => void;
   productionLogs: ProductionRecord[];
@@ -192,8 +193,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const updatedVariants = sp.variants.map((v) => {
         const vOverride = priceOverrides[v.id];
         if (vOverride) {
-          const mrp = Number(vOverride.mrp) || v.mrp;
-          const price = Number(vOverride.price) || v.price;
+          const mrp = vOverride.mrp !== undefined ? Number(vOverride.mrp) : v.mrp;
+          const price = vOverride.price !== undefined ? Number(vOverride.price) : v.price;
           const discountPct = vOverride.discountPct !== undefined ? vOverride.discountPct : mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
           return {
             ...v,
@@ -218,8 +219,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const updatedVariants = cp.variants.map((v) => {
         const vOverride = priceOverrides[v.id];
         if (vOverride) {
-          const mrp = Number(vOverride.mrp) || v.mrp;
-          const price = Number(vOverride.price) || v.price;
+          const mrp = vOverride.mrp !== undefined ? Number(vOverride.mrp) : v.mrp;
+          const price = vOverride.price !== undefined ? Number(vOverride.price) : v.price;
           const discountPct = vOverride.discountPct !== undefined ? vOverride.discountPct : mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
           return {
             ...v,
@@ -237,6 +238,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [...baseProducts, ...customMapped];
   };
 
+  const syncCatalogFromCloud = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', 'SYS-CATALOG-OVERRIDES')
+        .maybeSingle();
+
+      if (data && !error && data.delivery_address) {
+        const cloudAddr = data.delivery_address;
+
+        if (cloudAddr.variant_overrides && typeof cloudAddr.variant_overrides === 'object') {
+          const localOverrides = getStoredData<Record<string, any>>('savera_variant_overrides_v1', {});
+          const mergedOverrides = { ...localOverrides, ...cloudAddr.variant_overrides };
+          setStoredData('savera_variant_overrides_v1', mergedOverrides);
+        }
+
+        if (cloudAddr.product_overrides && typeof cloudAddr.product_overrides === 'object') {
+          const localProdOverrides = getStoredData<Record<string, any>>('savera_product_overrides_v1', {});
+          const mergedProdOverrides = { ...localProdOverrides, ...cloudAddr.product_overrides };
+          setStoredData('savera_product_overrides_v1', mergedProdOverrides);
+        }
+
+        if (Array.isArray(cloudAddr.custom_products)) {
+          setStoredData('savera_custom_products_v1', cloudAddr.custom_products);
+        }
+
+        if (Array.isArray(cloudAddr.deleted_product_ids)) {
+          setStoredData('savera_deleted_products_v1', cloudAddr.deleted_product_ids);
+        }
+
+        const updated = computeEffectiveProducts();
+        setProducts(updated);
+
+        // Re-synchronize cart prices against updated catalog
+        setCart((prevCart) =>
+          prevCart.map((item) => {
+            const prod = updated.find((p) => p.id === item.productId);
+            const variant = prod?.variants.find((v) => v.id === item.variantId);
+            return variant ? { ...item, price: variant.price } : item;
+          })
+        );
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
+        }
+      }
+    } catch (e) {
+      console.warn('Catalog sync from cloud error:', e);
+    }
+  };
+
+  const saveCatalogToCloud = async (
+    variantOverridesToSave?: Record<string, any>,
+    productOverridesToSave?: Record<string, any>,
+    customProductsToSave?: Product[],
+    deletedIdsToSave?: string[]
+  ) => {
+    try {
+      const vOverrides = variantOverridesToSave || getStoredData<Record<string, any>>('savera_variant_overrides_v1', {});
+      const pOverrides = productOverridesToSave || getStoredData<Record<string, any>>('savera_product_overrides_v1', {});
+      const cProducts = customProductsToSave || getStoredData<Product[]>('savera_custom_products_v1', []);
+      const dIds = deletedIdsToSave || getStoredData<string[]>('savera_deleted_products_v1', []);
+
+      await supabase.from('orders').upsert({
+        id: 'SYS-CATALOG-OVERRIDES',
+        order_number: 'SYS-CFG',
+        customer_name: 'Savera Catalog Config',
+        customer_phone: '9999999999',
+        payment_method: 'System',
+        total_amount: 0,
+        delivery_address: {
+          variant_overrides: vOverrides,
+          product_overrides: pOverrides,
+          custom_products: cProducts,
+          deleted_product_ids: dIds,
+          updated_at: new Date().toISOString(),
+        },
+        items: [],
+      }, { onConflict: 'id' });
+    } catch (e) {
+      console.warn('Failed to persist catalog overrides to cloud:', e);
+    }
+  };
+
   // Load stored data on mount
   useEffect(() => {
     // Purge legacy full-array cache keys and any baseline timestamp to ensure real database orders are always visible
@@ -251,6 +337,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const effectiveProducts = computeEffectiveProducts();
     setProducts(effectiveProducts);
+    syncCatalogFromCloud();
 
     const handleSync = () => {
       const updated = computeEffectiveProducts();
@@ -337,12 +424,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data && !error) {
         // 1. Sync live global product overrides from database
         const configRecord = data.find((d: any) => d.id === 'SYS-CATALOG-OVERRIDES');
-        if (configRecord?.delivery_address?.variant_overrides) {
-          const remoteOverrides = configRecord.delivery_address.variant_overrides;
-          const localOverrides = getStoredData<Record<string, any>>('savera_variant_overrides_v1', {});
-          const mergedOverrides = { ...localOverrides, ...remoteOverrides };
-          setStoredData('savera_variant_overrides_v1', mergedOverrides);
-          const updatedProds = computeEffectiveProducts(mergedOverrides);
+        if (configRecord?.delivery_address) {
+          const cloudAddr = configRecord.delivery_address;
+          if (cloudAddr.variant_overrides && typeof cloudAddr.variant_overrides === 'object') {
+            const localOverrides = getStoredData<Record<string, any>>('savera_variant_overrides_v1', {});
+            setStoredData('savera_variant_overrides_v1', { ...localOverrides, ...cloudAddr.variant_overrides });
+          }
+          if (cloudAddr.product_overrides && typeof cloudAddr.product_overrides === 'object') {
+            const localProdOverrides = getStoredData<Record<string, any>>('savera_product_overrides_v1', {});
+            setStoredData('savera_product_overrides_v1', { ...localProdOverrides, ...cloudAddr.product_overrides });
+          }
+          if (Array.isArray(cloudAddr.custom_products)) {
+            setStoredData('savera_custom_products_v1', cloudAddr.custom_products);
+          }
+          if (Array.isArray(cloudAddr.deleted_product_ids)) {
+            setStoredData('savera_deleted_products_v1', cloudAddr.deleted_product_ids);
+          }
+          const updatedProds = computeEffectiveProducts();
           setProducts(updatedProds);
         }
 
@@ -1224,7 +1322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Products & Pricing Management (Super Admin)
-  const addProduct = (newProdData: Omit<Product, 'id'> | Product) => {
+  const addProduct = async (newProdData: Omit<Product, 'id'> | Product) => {
     const newId = 'id' in newProdData && newProdData.id ? newProdData.id : `prod-${Date.now()}`;
     const newProduct: Product = {
       ...newProdData,
@@ -1240,12 +1338,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
     }
+
+    await saveCatalogToCloud(undefined, undefined, updatedList);
+
     logAuditAction('Product Created', newProduct.id, `Created ${newProduct.name} by Super Admin`);
     addToast('Product Added', `${newProduct.name} has been added to the store catalog.`, 'success');
     return newProduct;
   };
 
-  const updateProduct = (id: string, updates: Partial<Product>) => {
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
     const pOverrides = getStoredData<Record<string, any>>('savera_product_overrides_v1', {});
     pOverrides[id] = { ...(pOverrides[id] || {}), ...updates };
     setStoredData('savera_product_overrides_v1', pOverrides);
@@ -1256,11 +1357,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
     }
+
+    await saveCatalogToCloud(undefined, pOverrides);
+
     logAuditAction('Product Updated', id, `Updated attributes/details for product ID ${id}`);
     addToast('Product Updated', 'Product updated successfully.', 'success');
   };
 
-  const updateProductPrice = (productId: string, variantId: string, newPrice: number, newMrp?: number, newStock?: number) => {
+  const updateProductPrice = async (productId: string, variantId: string, newPrice: number, newMrp?: number, newStock?: number) => {
     let productName = '';
     const mrp = newMrp !== undefined ? newMrp : Math.max(newPrice, newPrice);
     const discountPct = mrp > newPrice ? Math.round(((mrp - newPrice) / mrp) * 100) : 0;
@@ -1274,7 +1378,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setStoredData('savera_variant_overrides_v1', overrides);
 
-    const updated = computeEffectiveProducts();
+    const updated = computeEffectiveProducts(overrides);
     const prod = updated.find((p) => p.id === productId);
     productName = prod ? prod.name : productId;
     setProducts(updated);
@@ -1284,39 +1388,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Persist to Supabase SYS-CATALOG-OVERRIDES for cross-device & cross-browser synchronization
-    try {
-      supabase.from('orders').upsert({
-        id: 'SYS-CATALOG-OVERRIDES',
-        order_number: 'SYS-CFG',
-        customer_name: 'Savera Catalog Config',
-        customer_phone: '9999999999',
-        payment_method: 'System',
-        total_amount: 0,
-        delivery_address: {
-          variant_overrides: overrides,
-          updated_at: new Date().toISOString(),
-        },
-        items: [],
-      }).then();
-    } catch (e) {}
+    await saveCatalogToCloud(overrides);
 
     logAuditAction('Price Updated', productId, `Updated price for ${productName || productId} variant ${variantId} to ₹${newPrice}`);
     addToast('Price Updated', `Price of ${productName || 'product'} updated to ₹${newPrice}.`, 'success');
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
     let deletedName = id;
     const customList = getStoredData<Product[]>('savera_custom_products_v1', []);
+    let updatedCustom = customList;
+    let updatedDeleted = getStoredData<string[]>('savera_deleted_products_v1', []);
+
     if (customList.some((p) => p.id === id)) {
       const target = customList.find((p) => p.id === id);
       deletedName = target ? target.name : id;
-      setStoredData('savera_custom_products_v1', customList.filter((p) => p.id !== id));
+      updatedCustom = customList.filter((p) => p.id !== id);
+      setStoredData('savera_custom_products_v1', updatedCustom);
     } else {
       const target = SEED_PRODUCTS.find((p) => p.id === id);
       deletedName = target ? target.name : id;
-      const deletedList = getStoredData<string[]>('savera_deleted_products_v1', []);
-      if (!deletedList.includes(id)) {
-        setStoredData('savera_deleted_products_v1', [...deletedList, id]);
+      if (!updatedDeleted.includes(id)) {
+        updatedDeleted = [...updatedDeleted, id];
+        setStoredData('savera_deleted_products_v1', updatedDeleted);
       }
     }
 
@@ -1326,6 +1420,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
     }
+
+    await saveCatalogToCloud(undefined, undefined, updatedCustom, updatedDeleted);
+
     logAuditAction('Product Deleted', id, `Removed ${deletedName} from live catalog`);
     addToast('Product Removed', `${deletedName} removed from catalog.`, 'info');
   };
@@ -1535,6 +1632,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cancelOrder,
         refreshOrders,
         refreshSubscriptions,
+        syncCatalogFromCloud,
         adminRole,
         setAdminRole,
         products,

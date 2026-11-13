@@ -56,12 +56,14 @@ export default function AdminDashboardPage() {
     resetToFreshBaseline,
     refreshOrders,
     refreshSubscriptions,
+    syncCatalogFromCloud,
     addToast,
   } = useApp();
 
   useEffect(() => {
     refreshOrders();
     refreshSubscriptions();
+    syncCatalogFromCloud();
   }, []);
 
   // Support Desk Local State
@@ -1322,9 +1324,8 @@ export default function AdminDashboardPage() {
               if (typeof window !== 'undefined') {
                 localStorage.removeItem('savera_baseline_timestamp');
               }
-              await refreshOrders();
-              await refreshSubscriptions();
-              addToast('Live Data Synced', 'Latest customer orders and revenue synced from database.', 'success');
+              await Promise.all([refreshOrders(), refreshSubscriptions(), syncCatalogFromCloud()]);
+              addToast('Live Data Synced', 'Latest customer orders, revenue, and prices synced from database.', 'success');
             }}
             className="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/50 text-emerald-300 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm"
             title="Fetch latest customer orders and revenue from database"

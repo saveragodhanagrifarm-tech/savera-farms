@@ -9,9 +9,14 @@ import { CategoryType, Product } from '@/types';
 import { Filter, Search, Sparkles, ArrowUpDown, X } from 'lucide-react';
 
 function ShopContent() {
-  const { products } = useApp();
+  const { products, syncCatalogFromCloud } = useApp();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Sync catalog prices from cloud on page load
+  useEffect(() => {
+    syncCatalogFromCloud();
+  }, []);
 
   const urlCategory = searchParams.get('cat') as CategoryType | null;
   const urlQuery = searchParams.get('q') || '';
