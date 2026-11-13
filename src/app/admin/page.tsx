@@ -1294,6 +1294,12 @@ export default function AdminDashboardPage() {
     .reduce((sum, o) => sum + o.totalAmount, 0);
   const ordersToday = orders.length;
   const activeSubsCount = subscriptions.filter((s) => s.status === 'Active').length;
+  const dailyMilkVolume = subscriptions
+    .filter((s) => s.status === 'Active')
+    .reduce((sum, s) => {
+      const vol = (s.variantName || '').includes('500') ? 0.5 : (s.variantName || '').includes('2') ? 2 : 1;
+      return sum + (s.quantityPerDelivery || 1) * vol;
+    }, 0);
   const lowStockCount = batches.filter((b) => b.status === 'Expiring Soon' || b.status === 'Depleted').length;
 
   return (
@@ -1320,23 +1326,11 @@ export default function AdminDashboardPage() {
               await refreshSubscriptions();
               addToast('Live Data Synced', 'Latest customer orders and revenue synced from database.', 'success');
             }}
-            className="bg-slate-900 hover:bg-slate-800 text-savera-saffron border border-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm"
+            className="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/50 text-emerald-300 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm"
             title="Fetch latest customer orders and revenue from database"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Sync Live Orders</span>
-          </button>
-          <button
-            onClick={() => {
-              if (window.confirm('Reset all test orders, subscriptions, and revenue back to 0 for clean testing?')) {
-                resetToFreshBaseline();
-              }
-            }}
-            className="bg-red-950/80 hover:bg-red-900 border border-red-700/50 text-red-300 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition"
-            title="Reset revenue and mock orders to zero for testing"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset Baseline (₹0)</span>
           </button>
           <Link
             href="/admin/products"
@@ -1391,7 +1385,7 @@ export default function AdminDashboardPage() {
           </div>
           <h3 className="font-serif text-3xl font-bold text-white">{activeSubsCount}</h3>
           <span className="text-[11px] text-savera-saffron flex items-center gap-1 font-semibold">
-            <Milk className="w-3.5 h-3.5" /> 245L Daily Milk Volume Forecast
+            <Milk className="w-3.5 h-3.5" /> {dailyMilkVolume > 0 ? `${dailyMilkVolume}L` : '0L'} Daily Milk Volume Forecast
           </span>
         </div>
 
@@ -1464,7 +1458,7 @@ export default function AdminDashboardPage() {
                     </td>
                   </tr>
                 ) : (
-                  orders.map((ord) => (
+                  orders.slice(0, 8).map((ord) => (
                     <tr key={ord.id} className="hover:bg-slate-900/50">
                       <td className="p-3 font-mono font-bold text-white">{ord.orderNumber}</td>
                       <td className="p-3 font-semibold">{ord.customerName}</td>

@@ -44,10 +44,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     debitWallet,
     addAddress,
     addToast,
+    products,
   } = useApp();
 
+  const liveProduct = products.find((p) => p.id === product.id) || product;
+
   const [selectedVariantId, setSelectedVariantId] = useState(
-    initialVariantId || product.variants[0]?.id || ''
+    initialVariantId || liveProduct.variants[0]?.id || ''
   );
   const [quantity, setQuantity] = useState(1);
   const [frequency, setFrequency] = useState<SubscriptionFrequency>('Daily');
@@ -71,7 +74,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [paymentOption, setPaymentOption] = useState<'wallet' | 'online'>('online');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const selectedVariant = product.variants.find((v) => v.id === selectedVariantId) || product.variants[0];
+  const selectedVariant = liveProduct.variants.find((v) => v.id === selectedVariantId) || liveProduct.variants[0];
 
   // Estimate monthly deliveries based on frequency
   let monthlyDeliveries = 30;
@@ -159,8 +162,9 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
       customerId: user.id || customer.id,
       customerName: profile?.full_name || customer.fullName,
       customerPhone: profile?.phone || customer.phone,
-      productId: product.id,
-      productName: product.name,
+      customerEmail: user.email || profile?.email || customer.email || '',
+      productId: liveProduct.id,
+      productName: liveProduct.name,
       variantId: selectedVariant.id,
       variantName: selectedVariant.name,
       quantityPerDelivery: quantity,
@@ -285,10 +289,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
         {/* Product Details Banner */}
         <div className="bg-savera-cream/70 rounded-2xl p-3.5 mb-4 border border-savera-saffron/30 flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl overflow-hidden relative shrink-0 bg-white">
-            <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+            <img src={liveProduct.images[0]} alt={liveProduct.name} className="w-full h-full object-cover" />
           </div>
           <div>
-            <h4 className="font-serif font-bold text-savera-dark text-sm">{product.name}</h4>
+            <h4 className="font-serif font-bold text-savera-dark text-sm">{liveProduct.name}</h4>
             <div className="flex items-center gap-2 text-xs font-semibold text-savera-brown mt-0.5">
               <span>₹{pricePerUnit} / unit</span>
               <span>•</span>
@@ -302,7 +306,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div>
             <label className="text-xs font-bold text-savera-dark block mb-1">Select Bottle Size:</label>
             <div className="grid grid-cols-3 gap-2">
-              {product.variants.map((v) => (
+              {liveProduct.variants.map((v) => (
                 <button
                   type="button"
                   key={v.id}

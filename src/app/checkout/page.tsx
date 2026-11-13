@@ -129,7 +129,7 @@ export default function CheckoutPage() {
 
   const handleCompleteCheckout = () => {
     const effectiveEmail = user?.email || profile?.email || guestEmail || customer.email;
-    const addressToUse = selectedAddress || {
+    const baseAddress = selectedAddress || {
       id: 'addr-temp',
       fullName: fullName || profile?.full_name || customer.fullName || 'Customer',
       mobileNumber: mobileNumber || profile?.phone || customer.phone || '+91 98765 43210',
@@ -140,6 +140,10 @@ export default function CheckoutPage() {
       state,
       pincode,
       type: addressType,
+    };
+    const addressToUse = {
+      ...baseAddress,
+      customer_email: effectiveEmail,
     };
 
     if (paymentMethod === 'Wallets') {

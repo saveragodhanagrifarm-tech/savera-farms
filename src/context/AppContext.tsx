@@ -178,8 +178,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isHydrated = useRef(false);
 
   // Helper to compute effective products by overlaying dynamic overrides onto canonical SEED_PRODUCTS
-  const computeEffectiveProducts = (): Product[] => {
-    const priceOverrides = getStoredData<Record<string, { price: number; mrp: number; discountPct: number; stock?: number }>>(
+  const computeEffectiveProducts = (customVariantOverrides?: Record<string, any>): Product[] => {
+    const priceOverrides = customVariantOverrides || getStoredData<Record<string, { price: number; mrp: number; discountPct: number; stock?: number }>>(
       'savera_variant_overrides_v1',
       {}
     );
@@ -239,8 +239,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load stored data on mount
   useEffect(() => {
-    // Purge legacy full-array cache keys to prevent stale price persistence
+    // Purge legacy full-array cache keys and any baseline timestamp to ensure real database orders are always visible
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('savera_baseline_timestamp');
       localStorage.removeItem('savera_products_v5');
       localStorage.removeItem('savera_products_v4');
       localStorage.removeItem('savera_products_v3');
@@ -334,7 +335,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .order('created_at', { ascending: false });
 
       if (data && !error) {
-        const fetchedOrders: Order[] = data.map((d: any) => ({
+        // 1. Sync live global product overrides from database
+        const configRecord = data.find((d: any) => d.id === 'SYS-CATALOG-OVERRIDES');
+        if (configRecord?.delivery_address?.variant_overrides) {
+          const remoteOverrides = configRecord.delivery_address.variant_overrides;
+          const localOverrides = getStoredData<Record<string, any>>('savera_variant_overrides_v1', {});
+          const mergedOverrides = { ...localOverrides, ...remoteOverrides };
+          setStoredData('savera_variant_overrides_v1', mergedOverrides);
+          const updatedProds = computeEffectiveProducts(mergedOverrides);
+          setProducts(updatedProds);
+        }
+
+        // 2. Map customer orders (excluding system config records)
+        const customerOrdersData = data.filter((d: any) => d.id !== 'SYS-CATALOG-OVERRIDES');
+        const fetchedOrders: Order[] = customerOrdersData.map((d: any) => ({
           id: d.id,
           orderNumber: d.order_number,
           customerId: d.user_id || d.delivery_address?.customer_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
@@ -360,19 +374,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updatedAt: d.created_at || new Date().toISOString(),
         }));
 
-        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
-        const activeOrders = baselineTime
-          ? fetchedOrders.filter((o) => o.createdAt >= baselineTime)
-          : fetchedOrders;
-
         setOrders((prevOrders) => {
           const orderMap = new Map<string, Order>();
           prevOrders.forEach((o) => {
-            if (!baselineTime || o.createdAt >= baselineTime) {
+            if (o.id !== 'SYS-CATALOG-OVERRIDES') {
               orderMap.set(o.orderNumber || o.id, o);
             }
           });
-          activeOrders.forEach((o) => {
+          fetchedOrders.forEach((o) => {
             const key = o.orderNumber || o.id;
             orderMap.set(key, { ...(orderMap.get(key) || {}), ...o });
           });
@@ -401,44 +410,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const milkProduct = effectiveProducts.find((p) => p.isSubscriptionEligible) || effectiveProducts[0];
         const defaultMilkPrice = milkProduct?.variants[0]?.price || 100;
 
-        const fetchedSubs: MilkSubscription[] = data.map((d: any) => ({
-          id: d.id,
-          customerId: d.user_id || d.delivery_address?.customer_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
-          customerName: d.customer_name || 'Savera Member',
-          customerPhone: d.customer_phone || '',
-          productId: d.product_id || milkProduct?.id || 'prod-a2-milk',
-          productName: d.product_name || milkProduct?.name || 'A2 Desi Cow Milk',
-          variantId: d.variant_id || milkProduct?.variants[0]?.id || 'var-a2m-1l',
-          variantName: d.variant_name || milkProduct?.variants[0]?.name || '1 Litre Glass Bottle',
-          quantityPerDelivery: d.quantity || 1,
-          pricePerUnit: d.monthly_cost ? Math.round(d.monthly_cost / (30 * (d.quantity || 1))) : defaultMilkPrice,
-          frequency: (d.schedule_type as any) || 'Daily',
-          customDays: d.custom_days || [],
-          deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
-          deliveryAddress: d.delivery_address || {},
-          startDate: d.start_date || new Date().toISOString().split('T')[0],
-          status: (d.status as any) || 'Active',
-          skippedDates: [],
-          nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-          monthlyEstimate: Number(d.monthly_cost) || (30 * defaultMilkPrice * (d.quantity || 1)),
-        }));
+        const fetchedSubs: MilkSubscription[] = data.map((d: any) => {
+          const freq = (d.schedule_type as any) || 'Daily';
+          let deliveriesPerMonth = 30;
+          if (freq === 'Alternate Days') deliveriesPerMonth = 15;
+          else if (freq === '3 Days/Week') deliveriesPerMonth = 12;
+          else if (freq === 'Weekly') deliveriesPerMonth = 4;
+          else if (freq === 'Custom' && Array.isArray(d.custom_days)) deliveriesPerMonth = d.custom_days.length * 4;
 
-        const baselineTime = typeof window !== 'undefined' ? localStorage.getItem('savera_baseline_timestamp') : null;
-        const activeSubs = baselineTime
-          ? fetchedSubs.filter((s) => s.startDate >= baselineTime.split('T')[0])
-          : fetchedSubs;
+          const unitPrice = (d.monthly_cost && deliveriesPerMonth > 0 && d.quantity)
+            ? Math.round(d.monthly_cost / (deliveriesPerMonth * d.quantity))
+            : defaultMilkPrice;
+
+          return {
+            id: d.id,
+            customerId: d.user_id || d.delivery_address?.customer_id || (d.customer_name ? `cust-${d.customer_name}` : 'cust-user'),
+            customerName: d.customer_name || 'Savera Member',
+            customerPhone: d.customer_phone || '',
+            customerEmail: d.customer_email || d.delivery_address?.customer_email || d.delivery_address?.email || '',
+            productId: d.product_id || milkProduct?.id || 'prod-a2-milk',
+            productName: d.product_name || milkProduct?.name || 'A2 Desi Cow Milk',
+            variantId: d.variant_id || milkProduct?.variants[0]?.id || 'var-a2m-1l',
+            variantName: d.variant_name || milkProduct?.variants[0]?.name || '1 Litre Glass Bottle',
+            quantityPerDelivery: d.quantity || 1,
+            pricePerUnit: unitPrice,
+            frequency: freq,
+            customDays: d.custom_days || [],
+            deliverySlot: (d.delivery_slot as any) || '5:00 AM - 7:00 AM',
+            deliveryAddress: d.delivery_address || {},
+            startDate: d.start_date || new Date().toISOString().split('T')[0],
+            status: (d.status as any) || 'Active',
+            skippedDates: [],
+            nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+            monthlyEstimate: Number(d.monthly_cost) || (deliveriesPerMonth * defaultMilkPrice * (d.quantity || 1)),
+          };
+        });
 
         setSubscriptions((prevSubs) => {
           const subMap = new Map<string, MilkSubscription>();
-          prevSubs.forEach((s) => {
-            if (!baselineTime || s.startDate >= baselineTime.split('T')[0]) {
-              subMap.set(s.id, s);
-            }
-          });
-          activeSubs.forEach((s) => {
-            const key = s.id;
-            subMap.set(key, { ...(subMap.get(key) || {}), ...s });
-          });
+          prevSubs.forEach((s) => subMap.set(s.id, s));
+          fetchedSubs.forEach((s) => subMap.set(s.id, { ...(subMap.get(s.id) || {}), ...s }));
           const merged = Array.from(subMap.values());
           if (typeof window !== 'undefined') {
             localStorage.setItem('savera_subscriptions_v3', JSON.stringify(merged));
@@ -1030,7 +1041,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const assignedDriverPhone = isChandigarh ? '+91 98222 33445' : '+91 98111 22334';
 
     const resolvedCustomerId = user?.id || customer.id || 'cust-user';
-    const resolvedCustomerEmail = user?.email || profile?.email || customer.email || '';
+    const resolvedCustomerEmail = user?.email || profile?.email || (deliveryAddress as any)?.customer_email || (deliveryAddress as any)?.email || customer.email || '';
     const resolvedCustomerName = deliveryAddress.fullName || profile?.full_name || customer.fullName || (user?.email ? user.email.split('@')[0] : 'Customer');
     const resolvedCustomerPhone = deliveryAddress.mobileNumber || profile?.phone || customer.phone || '';
 
@@ -1182,26 +1193,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetToFreshBaseline = () => {
-    const newBaselineTime = new Date().toISOString();
     if (typeof window !== 'undefined') {
-      localStorage.setItem('savera_baseline_timestamp', newBaselineTime);
-      localStorage.setItem('savera_orders_v3', JSON.stringify([]));
-      localStorage.setItem('savera_subscriptions_v3', JSON.stringify([]));
-      localStorage.setItem('savera_wallet_tx_v3', JSON.stringify([]));
+      localStorage.removeItem('savera_baseline_timestamp');
+      localStorage.setItem('savera_cart_v2', JSON.stringify([]));
       localStorage.removeItem('savera_orders_v2');
       localStorage.removeItem('savera_subscriptions_v2');
       localStorage.removeItem('savera_wallet_tx_v2');
-      if (user?.id) {
-        localStorage.removeItem(`savera_user_orders_${user.id}`);
-        localStorage.removeItem(`savera_user_subs_${user.id}`);
-      }
     }
-    setOrders([]);
-    setSubscriptions([]);
-    setWalletTransactions([]);
     setCart([]);
-    addToast('Baseline Reset to Zero (₹0)', 'All customer orders, active subscriptions, and revenue reset to 0.', 'success');
-    logAuditAction('System Reset', 'Platform Baseline', 'Super Admin reset orders & revenue to zero');
+    refreshOrders();
+    refreshSubscriptions();
+    addToast('Live Data Resynced', 'Refreshed latest real-time orders, subscriptions, and revenue from database.', 'success');
+    logAuditAction('System Sync', 'Live Sync', 'Super Admin refreshed live database orders & revenue');
   };
 
   const cancelOrder = (orderId: string, reason?: string) => {
@@ -1279,6 +1282,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('savera-products-updated', { detail: updated }));
     }
+
+    // Persist to Supabase SYS-CATALOG-OVERRIDES for cross-device & cross-browser synchronization
+    try {
+      supabase.from('orders').upsert({
+        id: 'SYS-CATALOG-OVERRIDES',
+        order_number: 'SYS-CFG',
+        customer_name: 'Savera Catalog Config',
+        customer_phone: '9999999999',
+        payment_method: 'System',
+        total_amount: 0,
+        delivery_address: {
+          variant_overrides: overrides,
+          updated_at: new Date().toISOString(),
+        },
+        items: [],
+      }).then();
+    } catch (e) {}
+
     logAuditAction('Price Updated', productId, `Updated price for ${productName || productId} variant ${variantId} to ₹${newPrice}`);
     addToast('Price Updated', `Price of ${productName || 'product'} updated to ₹${newPrice}.`, 'success');
   };

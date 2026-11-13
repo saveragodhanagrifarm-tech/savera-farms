@@ -57,6 +57,7 @@ export interface MilkSubscription {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   productId: string;
   productName: string;
   variantId: string;
