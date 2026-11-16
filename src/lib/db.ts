@@ -917,6 +917,67 @@ export const SEED_PRODUCTS: Product[] = [
     isFeatured: true,
   },
   {
+    id: 'prod-buffalo-milk',
+    name: 'Farm Fresh Desi Buffalo Milk',
+    tagline: 'Rich Creamy Fresh Milk from Murrah Buffalo Breed',
+    category: 'Milk',
+    subcategory: 'Buffalo Milk',
+    description: '100% pure farm fresh buffalo milk collected fresh every morning from traditional Murrah breed buffaloes. Renowned for its rich natural creaminess, thick velvety malai, and high nutritional density. Untouched by human hands, free from antibiotics, synthetic hormones, water dilution, or chemical preservatives. Delivered in chilled glass bottles within hours of morning milking.',
+    ingredients: ['100% Pure Raw Murrah Buffalo Milk'],
+    fatPercentage: '6.8% - 7.5%',
+    nutritionalInfo: [
+      { label: 'Energy (per 100ml)', value: '97 kcal' },
+      { label: 'Fat (Natural Cream)', value: '7.2 g' },
+      { label: 'Protein', value: '4.0 g' },
+      { label: 'Carbohydrates', value: '5.2 g' },
+      { label: 'Calcium', value: '195 mg' },
+    ],
+    storageInstructions: 'Keep refrigerated between 2°C to 4°C. Boil before consumption.',
+    shelfLife: '48 Hours from delivery when refrigerated.',
+    manufacturingInfo: 'Milked and bottled at Savera Farms Dairy Estate, Panchkula – Morni Foothills Belt, Haryana.',
+    origin: 'Savera Farms Organic Dairy Estate, Panchkula',
+    benefits: [
+      'High natural fat (6.8% - 7.5%) produces exceptionally thick malai, rich curd, and velvety tea',
+      'Contains nearly double the calcium and phosphorus of standard milk for strong bones',
+      'Naturally dense in protein and essential fat-soluble vitamins (A, D, E)',
+      '100% pure, unadulterated & cold-chain delivered to your doorstep before 7:00 AM',
+    ],
+    howItIsMade: [
+      '01. Morning milking of healthy Murrah buffaloes at Savera Farm Estate',
+      '02. Immediate inline chilling at 4°C to lock in natural cream and freshness',
+      '03. Automated hygienic glass bottle filling and vacuum sealing',
+      '04. Dispatched in temperature-controlled cold chain vans before 7:00 AM',
+    ],
+    faqs: [
+      {
+        question: 'What makes Savera Buffalo Milk special?',
+        answer: 'Our buffalo milk is collected exclusively from native Murrah buffaloes reared ethically in open farm paddocks. It has high natural fat (6.8% - 7.5%) and rich calcium, giving you thick golden malai, dense curd, and rich tea without any water dilution or milk powder.',
+      },
+      {
+        question: 'What is the price of Savera Buffalo Milk?',
+        answer: 'Savera Farm Fresh Buffalo Milk is ₹75 per 1 Litre glass bottle (MRP ₹80).',
+      },
+      {
+        question: 'Can I subscribe for daily morning delivery?',
+        answer: 'Yes! Savera Buffalo Milk is eligible for daily, alternate day, or custom morning delivery subscriptions directly to your doorstep in Panchkula, Chandigarh, and Mohali.',
+      },
+    ],
+    images: [
+      '/images/buffalo-milk.jpg',
+      '/images/buffalo-milk.png',
+    ],
+    variants: [
+      { id: 'var-buf-1l', name: '1 Litre Glass Bottle', price: 75, mrp: 80, discountPct: 6, stock: 400, sku: 'SAV-MILK-BUF-1L', weightVolume: '1 L' },
+      { id: 'var-buf-500ml', name: '500 ml Glass Bottle', price: 40, mrp: 45, discountPct: 11, stock: 250, sku: 'SAV-MILK-BUF-500ML', weightVolume: '500 ml' },
+      { id: 'var-buf-2l', name: '2 Litre Family Can', price: 145, mrp: 155, discountPct: 6, stock: 150, sku: 'SAV-MILK-BUF-2L', weightVolume: '2 L' },
+    ],
+    rating: 4.9,
+    reviewCount: 184,
+    isSubscriptionEligible: true,
+    isBestSeller: true,
+    isFeatured: true,
+  },
+  {
     id: 'prod-a2-ghee',
     name: 'A2 Vedic Bilona Cow Ghee',
     tagline: 'Hand-Churned Traditional Bilona Ghee from Curd',
@@ -1109,6 +1170,22 @@ export const SEED_SUBSCRIPTIONS: MilkSubscription[] = [];
 export const SEED_ORDERS: Order[] = [];
 
 export const SEED_BATCHES: BatchItem[] = [
+  {
+    id: 'batch-buf-1',
+    batchId: 'BATCH-20260824-BUF',
+    productId: 'prod-buffalo-milk',
+    productName: 'Farm Fresh Desi Buffalo Milk',
+    variantId: 'var-buf-1l',
+    variantName: '1 Litre Glass Bottle',
+    productionDate: '2026-08-24',
+    expiryDate: '2026-08-26',
+    quantityProduced: 400,
+    quantitySold: 210,
+    wastage: 4,
+    unitCost: 38,
+    supplierSource: 'Savera Farm Estate Unit-1',
+    status: 'Fresh'
+  },
   {
     id: 'batch-1',
     batchId: 'BATCH-20260823-A2M',

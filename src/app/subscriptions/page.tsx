@@ -42,6 +42,7 @@ export default function SubscriptionsPage() {
 
   const [selectedSubId, setSelectedSubId] = useState<string>('');
   const [showNewSubModal, setShowNewSubModal] = useState(false);
+  const [selectedMilkProduct, setSelectedMilkProduct] = useState<Product | null>(null);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -173,12 +174,80 @@ export default function SubscriptionsPage() {
             <span>Sync</span>
           </button>
           <button
-            onClick={() => setShowNewSubModal(true)}
+            onClick={() => {
+              setSelectedMilkProduct(null);
+              setShowNewSubModal(true);
+            }}
             className="bg-savera-saffron hover:bg-savera-saffronDark text-savera-brown font-bold px-6 py-3 rounded-2xl text-xs shadow-md flex items-center gap-2 transition"
           >
             <Milk className="w-4 h-4 text-savera-dark" />
             <span>+ Add New Subscription</span>
           </button>
+        </div>
+      </div>
+
+      {/* Available Milk Subscription Options */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-savera-dark/10 shadow-soft space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span className="text-[10px] font-bold text-savera-green uppercase tracking-wider">
+              Doorstep Morning Drops • 5 AM – 7 AM
+            </span>
+            <h3 className="font-serif text-xl sm:text-2xl font-bold text-savera-dark">
+              Available Daily Milk Subscriptions
+            </h3>
+          </div>
+          <span className="text-xs text-savera-brown">Cold-chain delivered across Tricity</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {milkProducts.map((p) => {
+            const v1L = p.variants[0];
+            return (
+              <div
+                key={p.id}
+                className="p-5 rounded-2xl border border-savera-saffron/40 bg-savera-cream/40 hover:bg-savera-cream/80 transition flex flex-col justify-between space-y-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-savera-dark text-savera-saffron uppercase tracking-wider">
+                      {p.fatPercentage || 'Pure Farm Milk'} Fat
+                    </span>
+                    <h4 className="font-serif font-bold text-base text-savera-dark mt-1">
+                      {p.name}
+                    </h4>
+                    <p className="text-xs text-savera-brown line-clamp-2 mt-0.5">
+                      {p.tagline}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-base font-bold text-savera-green block">
+                      ₹{v1L?.price || 75}
+                    </span>
+                    <span className="text-[11px] text-gray-400 line-through">
+                      MRP ₹{v1L?.mrp || 80}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-savera-dark/10 flex items-center justify-between">
+                  <span className="text-[11px] text-savera-brown font-medium">
+                    1L Chilled Glass Bottle
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedMilkProduct(p);
+                      setShowNewSubModal(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-savera-dark text-savera-saffron hover:bg-savera-green hover:text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Milk className="w-3.5 h-3.5" />
+                    <span>Subscribe {p.subcategory || 'Milk'}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -462,9 +531,12 @@ export default function SubscriptionsPage() {
       {/* New Subscription Setup Modal */}
       {showNewSubModal && (
         <SubscribeModal
-          product={defaultMilkProduct}
-          initialVariantId={defaultMilkProduct.variants[0]?.id}
-          onClose={() => setShowNewSubModal(false)}
+          product={selectedMilkProduct || defaultMilkProduct}
+          initialVariantId={(selectedMilkProduct || defaultMilkProduct).variants[0]?.id}
+          onClose={() => {
+            setShowNewSubModal(false);
+            setSelectedMilkProduct(null);
+          }}
         />
       )}
     </div>

@@ -207,8 +207,8 @@ export default function HomePage() {
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-savera-dark text-savera-saffron flex items-center justify-center mx-auto group-hover:scale-110 transition">
               <Milk className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">A2 Desi Cow Milk</h3>
-            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">Gir & Sahiwal fresh chilled milk</p>
+            <h3 className="font-serif text-sm sm:text-base font-bold text-savera-dark">Fresh Farm Milk</h3>
+            <p className="text-[10px] sm:text-[11px] text-savera-brown/80 line-clamp-2">A2 Desi Cow &amp; Murrah Buffalo Milk</p>
           </Link>
 
           <Link

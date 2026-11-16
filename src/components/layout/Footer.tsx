@@ -118,6 +118,7 @@ export const Footer: React.FC = () => {
             <h4 className="text-sm font-serif font-bold text-white mb-4 text-savera-saffron">Product Categories</h4>
             <ul className="space-y-2 text-xs text-savera-cream/80">
               <li><Link href="/shop/prod-a2-milk" className="hover:text-white transition">A2 Desi Cow Milk</Link></li>
+              <li><Link href="/shop/prod-buffalo-milk" className="hover:text-white transition">Farm Fresh Buffalo Milk</Link></li>
               <li><Link href="/shop/prod-a2-ghee" className="hover:text-white transition">A2 Vedic Bilona Ghee</Link></li>
               <li><Link href="/shop/prod-fresh-paneer" className="hover:text-white transition">Fresh Malai Paneer</Link></li>
               <li><Link href="/shop/prod-farm-curd" className="hover:text-white transition">Farm Fresh Curd (Dahi)</Link></li>
