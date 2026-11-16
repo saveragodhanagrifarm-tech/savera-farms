@@ -22,8 +22,8 @@ export const SEED_PRODUCTS: Product[] = [
   // --- SAVERA SIGNATURE ORGANIC & HERBAL RANGE ---
   {
     id: 'prod-rog-nasak-chai',
-    name: 'Rog Nasak Chai',
-    tagline: 'A comforting, traditional herbal tea blend.',
+    name: 'Rog Nashak Chai',
+    tagline: 'A comforting, traditional herbal wellness tea blend.',
     category: 'Herbal & Wellness',
     subcategory: 'Herbal Tea',
     description: 'A comforting, traditional herbal tea blend crafted from hand-picked botanical herbs, sacred tulsi, mulethi, dry ginger, cinnamon, and whole spices. Soothing for the throat, supports healthy respiration, and promotes gentle daily detoxification.',
@@ -59,7 +59,7 @@ export const SEED_PRODUCTS: Product[] = [
       '/images/rog-nasak-chai.png',
     ],
     variants: [
-      { id: 'var-rnc-100g', name: '100g Pouch', price: 180, mrp: 210, discountPct: 14, stock: 150, sku: 'SAV-TEA-RNC-100G', weightVolume: '100 g' },
+      { id: 'var-rnc-150g', name: '150g Eco Pouch', price: 250, mrp: 290, discountPct: 14, stock: 150, sku: 'SAV-TEA-RNC-150G', weightVolume: '150 g' },
       { id: 'var-rnc-250g', name: '250g Glass Jar', price: 390, mrp: 460, discountPct: 15, stock: 80, sku: 'SAV-TEA-RNC-250G', weightVolume: '250 g' },
     ],
     rating: 4.9,

@@ -124,7 +124,7 @@ export const Footer: React.FC = () => {
               <li><Link href="/shop/prod-farm-curd" className="hover:text-white transition">Farm Fresh Curd (Dahi)</Link></li>
               <li><Link href="/shop/prod-cold-mustard" className="hover:text-white transition">Cold Pressed Mustard Oil</Link></li>
               <li><Link href="/shop/prod-coconut-oil" className="hover:text-white transition">Cold Pressed Coconut Oil</Link></li>
-              <li><Link href="/shop/prod-rog-nasak-chai" className="hover:text-white transition">Rog Nasak Herbal Chai</Link></li>
+              <li><Link href="/shop/prod-rog-nasak-chai" className="hover:text-white transition">Rog Nashak Herbal Chai</Link></li>
               <li><Link href="/shop/prod-himalayan-shilajit" className="hover:text-white transition">Himalayan Shilajit Resin</Link></li>
               <li><Link href="/subscriptions" className="text-savera-saffron font-bold hover:underline">Daily Milk Subscriptions</Link></li>
             </ul>
