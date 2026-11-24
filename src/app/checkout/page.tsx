@@ -72,6 +72,19 @@ export default function CheckoutPage() {
   const [addressType, setAddressType] = useState<'Home' | 'Work' | 'Other'>('Home');
 
   useEffect(() => {
+    if (selectedPincode) {
+      setPincode(selectedPincode);
+      if (selectedPincode.startsWith('16')) {
+        setCity('Chandigarh');
+        setState('Chandigarh');
+      } else if (selectedPincode.startsWith('134')) {
+        setCity('Panchkula');
+        setState('Haryana');
+      }
+    }
+  }, [selectedPincode]);
+
+  useEffect(() => {
     if (user?.email) {
       setGuestEmail(user.email);
     }
@@ -443,7 +456,17 @@ export default function CheckoutPage() {
                     type="text"
                     placeholder="Pincode"
                     value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPincode(val);
+                      if (val.startsWith('16')) {
+                        setCity('Chandigarh');
+                        setState('Chandigarh');
+                      } else if (val.startsWith('134')) {
+                        setCity('Panchkula');
+                        setState('Haryana');
+                      }
+                    }}
                     className="w-full bg-white border border-savera-dark/20 rounded-xl px-3 py-2 text-xs font-mono font-bold"
                     required
                   />

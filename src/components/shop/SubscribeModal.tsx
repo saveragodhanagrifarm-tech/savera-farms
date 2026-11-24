@@ -142,15 +142,16 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     }
 
     if (!addressToUse) {
+      const isChd = (selectedPincode || '').startsWith('16');
       addressToUse = {
         id: 'addr-default',
         fullName: profile?.full_name || customer.fullName,
         mobileNumber: profile?.phone || customer.phone,
         houseFlat: 'Main Doorstep',
-        street: 'Sector 9 Hub',
-        area: 'Sector 9',
-        city: 'Panchkula',
-        state: 'Haryana',
+        street: isChd ? 'Sector 11-16 Distribution Belt' : 'Sector 9 Hub',
+        area: isChd ? 'Chandigarh Central' : 'Sector 9',
+        city: isChd ? 'Chandigarh' : 'Panchkula',
+        state: isChd ? 'Chandigarh' : 'Haryana',
         pincode: selectedPincode || '134109',
         type: 'Home',
       };

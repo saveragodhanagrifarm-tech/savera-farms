@@ -123,6 +123,11 @@ CREATE POLICY "Allow update orders"
   ON public.orders FOR UPDATE
   USING (true);
 
+DROP POLICY IF EXISTS "Allow delete orders" ON public.orders;
+CREATE POLICY "Allow delete orders"
+  ON public.orders FOR DELETE
+  USING (true);
+
 -- Subscriptions: Anyone can create a subscription; users can view
 DROP POLICY IF EXISTS "Allow insert subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow insert subscriptions"
@@ -137,5 +142,10 @@ CREATE POLICY "Allow select subscriptions"
 DROP POLICY IF EXISTS "Allow update subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow update subscriptions"
   ON public.subscriptions FOR UPDATE
+  USING (true);
+
+DROP POLICY IF EXISTS "Allow delete subscriptions" ON public.subscriptions;
+CREATE POLICY "Allow delete subscriptions"
+  ON public.subscriptions FOR DELETE
   USING (true);
 
