@@ -1201,7 +1201,7 @@ export const SEED_PRODUCTS: Product[] = [
     faqs: [
       {
         question: 'What is the price and packaging of Savera Lassi?',
-        answer: 'Savera Fresh Bilona Lassi is ₹80 for a 500 ml glass bottle (MRP ₹90). A family 1 Litre bottle is also available for ₹150 (MRP ₹170).',
+        answer: 'Savera Fresh Bilona Lassi is ₹80 for a 1 Litre glass bottle (MRP ₹90). A 500 ml glass bottle is also available for ₹45 (MRP ₹50).',
       },
       {
         question: 'Does Savera Lassi contain refined sugar or preservatives?',
@@ -1217,8 +1217,8 @@ export const SEED_PRODUCTS: Product[] = [
       '/images/fresh-lassi.png',
     ],
     variants: [
-      { id: 'var-lassi-500ml', name: '500 ml Glass Bottle', price: 80, mrp: 90, discountPct: 11, stock: 200, sku: 'SAV-DAIRY-LSI-500ML', weightVolume: '500 ml' },
-      { id: 'var-lassi-1l', name: '1 Litre Glass Bottle', price: 150, mrp: 170, discountPct: 12, stock: 120, sku: 'SAV-DAIRY-LSI-1L', weightVolume: '1 L' },
+      { id: 'var-lassi-1l', name: '1 Litre Glass Bottle', price: 80, mrp: 90, discountPct: 11, stock: 200, sku: 'SAV-DAIRY-LSI-1L', weightVolume: '1 L' },
+      { id: 'var-lassi-500ml', name: '500 ml Glass Bottle', price: 45, mrp: 50, discountPct: 10, stock: 150, sku: 'SAV-DAIRY-LSI-500ML', weightVolume: '500 ml' },
     ],
     rating: 4.9,
     reviewCount: 165,
@@ -1238,8 +1238,8 @@ export const SEED_BATCHES: BatchItem[] = [
     batchId: 'BATCH-20260824-LSI',
     productId: 'prod-fresh-lassi',
     productName: 'Fresh Bilona Desi Cow Lassi',
-    variantId: 'var-lassi-500ml',
-    variantName: '500 ml Glass Bottle',
+    variantId: 'var-lassi-1l',
+    variantName: '1 Litre Glass Bottle',
     productionDate: '2026-08-24',
     expiryDate: '2026-08-28',
     quantityProduced: 250,
