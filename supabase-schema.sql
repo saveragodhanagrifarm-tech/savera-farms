@@ -1,14 +1,24 @@
--- Savera Farms - Supabase Schema Migration
--- Run this in your Supabase SQL Editor:
--- https://supabase.com/dashboard/project/tokwwgzflrthlfqqjkvl/sql/new
+-- ==============================================================================
+-- Savera Farms - Supabase Production Database Setup & Migration
+-- ==============================================================================
+-- Run this script in your Supabase SQL Editor:
+-- Direct Link: https://supabase.com/dashboard/project/tokwwgzflrthlfqqjkvl/sql/new
+--
+-- This script:
+-- 1. Creates/Updates public.profiles, public.orders, public.subscriptions tables
+-- 2. Configures auto-sync of Auth users into public.profiles
+-- 3. Enables Row Level Security (RLS) with permissive read/write policies
+-- 4. Enables Supabase Realtime for instant order tracking
+-- 5. Wipes all old test orders & subscriptions for a clean launch (revenue = ₹0)
+-- ==============================================================================
 
--- 1. Create Profiles Table (Synced with Supabase Auth)
+-- 1. Profiles Table (Synced with Supabase Auth)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   email TEXT,
   full_name TEXT,
   phone TEXT,
-  role TEXT DEFAULT 'customer' CHECK (role IN ('customer', 'admin')),
+  role TEXT DEFAULT 'customer',
   avatar_url TEXT,
   reward_points INTEGER DEFAULT 50,
   wallet_balance NUMERIC(10, 2) DEFAULT 0.00,
@@ -16,7 +26,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Create Orders Table
+-- Ensure check constraint supports customer, admin, and rider
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check CHECK (role IN ('customer', 'admin', 'rider'));
+
+-- 2. Orders Table
 CREATE TABLE IF NOT EXISTS public.orders (
   id TEXT PRIMARY KEY,
   order_number TEXT NOT NULL,
@@ -38,7 +52,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Create Subscriptions Table
+-- 3. Subscriptions Table
 CREATE TABLE IF NOT EXISTS public.subscriptions (
   id TEXT PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -59,7 +73,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Automatically sync auth.users inserts into public.profiles
+-- 4. Auto-sync auth.users inserts/updates into public.profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -91,61 +105,73 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- 6. RLS Policies
--- Profiles: Users can read and update their own profile; admins can read all
+-- Profiles
 DROP POLICY IF EXISTS "Public profiles are viewable by owner and admin" ON public.profiles;
 CREATE POLICY "Public profiles are viewable by owner and admin"
-  ON public.profiles FOR SELECT
-  USING (true);
+  ON public.profiles FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 CREATE POLICY "Users can insert their own profile"
-  ON public.profiles FOR INSERT
-  WITH CHECK (true);
+  ON public.profiles FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
+  ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
--- Orders: Anyone can create an order; users can read their own; admins read all
+-- Orders
 DROP POLICY IF EXISTS "Allow insert orders" ON public.orders;
 CREATE POLICY "Allow insert orders"
-  ON public.orders FOR INSERT
-  WITH CHECK (true);
+  ON public.orders FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow select orders" ON public.orders;
 CREATE POLICY "Allow select orders"
-  ON public.orders FOR SELECT
-  USING (true);
+  ON public.orders FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow update orders" ON public.orders;
 CREATE POLICY "Allow update orders"
-  ON public.orders FOR UPDATE
-  USING (true);
+  ON public.orders FOR UPDATE USING (true);
 
 DROP POLICY IF EXISTS "Allow delete orders" ON public.orders;
 CREATE POLICY "Allow delete orders"
-  ON public.orders FOR DELETE
-  USING (true);
+  ON public.orders FOR DELETE USING (true);
 
--- Subscriptions: Anyone can create a subscription; users can view
+-- Subscriptions
 DROP POLICY IF EXISTS "Allow insert subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow insert subscriptions"
-  ON public.subscriptions FOR INSERT
-  WITH CHECK (true);
+  ON public.subscriptions FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow select subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow select subscriptions"
-  ON public.subscriptions FOR SELECT
-  USING (true);
+  ON public.subscriptions FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow update subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow update subscriptions"
-  ON public.subscriptions FOR UPDATE
-  USING (true);
+  ON public.subscriptions FOR UPDATE USING (true);
 
 DROP POLICY IF EXISTS "Allow delete subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow delete subscriptions"
-  ON public.subscriptions FOR DELETE
-  USING (true);
+  ON public.subscriptions FOR DELETE USING (true);
 
+-- 7. Enable Realtime Tracking
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'orders'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'subscriptions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.subscriptions;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  -- Catch in case publication isn't enabled yet
+  NULL;
+END $$;
+
+-- 8. Clean Slate: Wipe old test orders and test subscriptions (Keeps live catalog overrides)
+DELETE FROM public.orders WHERE id != 'SYS-CATALOG-OVERRIDES';
+DELETE FROM public.subscriptions;
