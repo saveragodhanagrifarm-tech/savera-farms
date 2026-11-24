@@ -1371,6 +1371,8 @@ export const SEED_DELIVERY_ZONES: DeliveryZone[] = [
   { id: 'zone-7', pincode: '160001', areaName: 'Chandigarh Sectors 1–10 (Sukhna Lake & North Hub)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 140, eveningSlotCap: 70, isServiceable: true },
   { id: 'zone-chd-11', pincode: '160011', areaName: 'Chandigarh Sector 11 (Sectors 11-A to 11-D)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 150, eveningSlotCap: 75, isServiceable: true },
   { id: 'zone-chd-12', pincode: '160012', areaName: 'Chandigarh Sector 12 (PGIMER Complex & Residential)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 130, eveningSlotCap: 60, isServiceable: true },
+  { id: 'zone-chd-13', pincode: '160101', areaName: 'Chandigarh Sector 13 (Mani Majra & Modern Housing Complex)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 150, eveningSlotCap: 75, isServiceable: true },
+  { id: 'zone-chd-13-alt', pincode: '160013', areaName: 'Chandigarh Sector 13 (Mani Majra Hub)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 150, eveningSlotCap: 75, isServiceable: true },
   { id: 'zone-chd-14', pincode: '160014', areaName: 'Chandigarh Sector 14 (Panjab University Campus)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 140, eveningSlotCap: 70, isServiceable: true },
   { id: 'zone-chd-15', pincode: '160015', areaName: 'Chandigarh Sector 15 (Sectors 15-A to 15-D & Patel Market)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 160, eveningSlotCap: 80, isServiceable: true },
   { id: 'zone-chd-16', pincode: '160016', areaName: 'Chandigarh Sector 16 (Rose Garden, General Hospital & Sec 16-A to 16-D)', deliveryFee: 30, freeThreshold: 299, morningSlotCap: 150, eveningSlotCap: 75, isServiceable: true },

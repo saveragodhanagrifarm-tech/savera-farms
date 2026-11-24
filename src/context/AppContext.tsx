@@ -407,7 +407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRawMaterials(getStoredData('savera_raw_v2', SEED_RAW_MATERIALS));
     setSuppliers(getStoredData('savera_suppliers_v2', SEED_SUPPLIERS));
     setPurchaseOrders(getStoredData('savera_purchase_orders_v2', SEED_PURCHASE_ORDERS));
-    const storedZones = getStoredData<DeliveryZone[]>('savera_zones_v4', []);
+    const storedZones = getStoredData<DeliveryZone[]>('savera_zones_v5', []);
     const zoneMap = new Map<string, DeliveryZone>();
     SEED_DELIVERY_ZONES.forEach((z) => zoneMap.set(z.pincode, z));
     storedZones.forEach((z) => zoneMap.set(z.pincode, { ...(zoneMap.get(z.pincode) || {}), ...z }));
@@ -716,7 +716,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isHydrated.current) setStoredData('savera_purchase_orders_v2', purchaseOrders);
   }, [purchaseOrders]);
   useEffect(() => {
-    if (isHydrated.current) setStoredData('savera_zones_v4', deliveryZones);
+    if (isHydrated.current) setStoredData('savera_zones_v5', deliveryZones);
   }, [deliveryZones]);
   useEffect(() => {
     if (isHydrated.current) setStoredData('savera_customer_v2', customer);
