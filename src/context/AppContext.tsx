@@ -76,7 +76,7 @@ interface AppContextType {
   updateAddress: (id: string, address: Partial<Omit<Address, 'id'>>) => void;
   deleteAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
-  resetToFreshBaseline: () => void;
+  resetToFreshBaseline: () => Promise<void> | void;
   rechargeWallet: (amount: number, referenceId?: string, description?: string) => void;
   debitWallet: (amount: number, referenceId?: string, description?: string) => boolean;
   walletTransactions: WalletTransaction[];
@@ -390,8 +390,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart(syncedCart);
 
     setCoupons(getStoredData('savera_coupons_v2', SEED_COUPONS));
-    setSubscriptions(getStoredData('savera_subscriptions_v3', SEED_SUBSCRIPTIONS));
-    setOrders(getStoredData('savera_orders_v3', SEED_ORDERS));
+    const launchTs = getStoredData<string | null>('savera_launch_baseline_ts', null);
+    const initialOrders = getStoredData<Order[]>('savera_orders_v3', SEED_ORDERS);
+    const filteredOrders = launchTs
+      ? initialOrders.filter((o) => !o.createdAt || new Date(o.createdAt) >= new Date(launchTs))
+      : initialOrders;
+    setOrders(filteredOrders.filter((o) => !(o.status === 'Cancelled' && o.totalAmount === 0)));
+
+    const initialSubs = getStoredData<MilkSubscription[]>('savera_subscriptions_v3', SEED_SUBSCRIPTIONS);
+    const filteredSubs = launchTs
+      ? initialSubs.filter((s) => !s.startDate || new Date(s.startDate) >= new Date(launchTs))
+      : initialSubs;
+    setSubscriptions(filteredSubs.filter((s) => s.status !== 'Cancelled'));
     setBatches(getStoredData('savera_batches_v2', SEED_BATCHES));
     setProductionLogs(getStoredData('savera_production_v2', SEED_PRODUCTION));
     setRawMaterials(getStoredData('savera_raw_v2', SEED_RAW_MATERIALS));
@@ -422,10 +432,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .order('created_at', { ascending: false });
 
       if (data && !error) {
-        // 1. Sync live global product overrides from database
+        // 1. Sync live global product overrides & launch baseline from database
         const configRecord = data.find((d: any) => d.id === 'SYS-CATALOG-OVERRIDES');
+        let launchBaseline = typeof window !== 'undefined' ? localStorage.getItem('savera_launch_baseline_ts') : null;
+
         if (configRecord?.delivery_address) {
           const cloudAddr = configRecord.delivery_address;
+          if (cloudAddr.launch_baseline_timestamp) {
+            launchBaseline = cloudAddr.launch_baseline_timestamp;
+            if (typeof window !== 'undefined' && launchBaseline) {
+              localStorage.setItem('savera_launch_baseline_ts', launchBaseline);
+            }
+          }
           if (cloudAddr.variant_overrides && typeof cloudAddr.variant_overrides === 'object') {
             const localOverrides = getStoredData<Record<string, any>>('savera_variant_overrides_v1', {});
             setStoredData('savera_variant_overrides_v1', { ...localOverrides, ...cloudAddr.variant_overrides });
@@ -444,8 +462,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setProducts(updatedProds);
         }
 
-        // 2. Map customer orders (excluding system config records)
-        const customerOrdersData = data.filter((d: any) => d.id !== 'SYS-CATALOG-OVERRIDES');
+        // 2. Map customer orders (excluding system config records and pre-launch test orders)
+        const customerOrdersData = data.filter((d: any) => {
+          if (d.id === 'SYS-CATALOG-OVERRIDES') return false;
+          // Filter out pre-baseline or zeroed cancelled test orders
+          if (launchBaseline && d.created_at && new Date(d.created_at) < new Date(launchBaseline)) return false;
+          if (d.status === 'Cancelled' && Number(d.total_amount) === 0 && d.payment_status === 'Cancelled') return false;
+          return true;
+        });
         const fetchedOrders: Order[] = customerOrdersData.map((d: any) => ({
           id: d.id,
           orderNumber: d.order_number,
@@ -476,6 +500,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const orderMap = new Map<string, Order>();
           prevOrders.forEach((o) => {
             if (o.id !== 'SYS-CATALOG-OVERRIDES') {
+              if (launchBaseline && o.createdAt && new Date(o.createdAt) < new Date(launchBaseline)) return;
+              if (o.status === 'Cancelled' && Number(o.totalAmount) === 0) return;
               orderMap.set(o.orderNumber || o.id, o);
             }
           });
@@ -504,11 +530,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .order('created_at', { ascending: false });
 
       if (data && !error) {
+        let launchBaseline = typeof window !== 'undefined' ? localStorage.getItem('savera_launch_baseline_ts') : null;
         const effectiveProducts = computeEffectiveProducts();
         const milkProduct = effectiveProducts.find((p) => p.isSubscriptionEligible) || effectiveProducts[0];
         const defaultMilkPrice = milkProduct?.variants[0]?.price || 100;
 
-        const fetchedSubs: MilkSubscription[] = data.map((d: any) => {
+        const activeSubsData = data.filter((d: any) => {
+          if (launchBaseline && d.created_at && new Date(d.created_at) < new Date(launchBaseline)) return false;
+          if (d.status === 'Cancelled') return false;
+          return true;
+        });
+
+        const fetchedSubs: MilkSubscription[] = activeSubsData.map((d: any) => {
           const freq = (d.schedule_type as any) || 'Daily';
           let deliveriesPerMonth = 30;
           if (freq === 'Alternate Days') deliveriesPerMonth = 15;
@@ -546,7 +579,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setSubscriptions((prevSubs) => {
           const subMap = new Map<string, MilkSubscription>();
-          prevSubs.forEach((s) => subMap.set(s.id, s));
+          prevSubs.forEach((s) => {
+            if (launchBaseline && s.startDate && new Date(s.startDate) < new Date(launchBaseline)) return;
+            if (s.status === 'Cancelled') return;
+            subMap.set(s.id, s);
+          });
           fetchedSubs.forEach((s) => subMap.set(s.id, { ...(subMap.get(s.id) || {}), ...s }));
           const merged = Array.from(subMap.values());
           if (typeof window !== 'undefined') {
@@ -1301,19 +1338,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {}
   };
 
-  const resetToFreshBaseline = () => {
+  const resetToFreshBaseline = async () => {
+    const launchTimestamp = new Date().toISOString();
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('savera_baseline_timestamp');
+      localStorage.setItem('savera_launch_baseline_ts', launchTimestamp);
       localStorage.setItem('savera_cart_v2', JSON.stringify([]));
+      localStorage.removeItem('savera_baseline_timestamp');
       localStorage.removeItem('savera_orders_v2');
+      localStorage.removeItem('savera_orders_v3');
       localStorage.removeItem('savera_subscriptions_v2');
+      localStorage.removeItem('savera_subscriptions_v3');
       localStorage.removeItem('savera_wallet_tx_v2');
+      localStorage.removeItem('savera_wallet_tx_v3');
+      window.dispatchEvent(new CustomEvent('savera-orders-updated'));
+      window.dispatchEvent(new CustomEvent('savera-subscriptions-updated'));
     }
     setCart([]);
-    refreshOrders();
-    refreshSubscriptions();
-    addToast('Live Data Resynced', 'Refreshed latest real-time orders, subscriptions, and revenue from database.', 'success');
-    logAuditAction('System Sync', 'Live Sync', 'Super Admin refreshed live database orders & revenue');
+    setOrders([]);
+    setSubscriptions([]);
+    setWalletTransactions([]);
+
+    try {
+      // 1. Persist launch baseline timestamp in Supabase SYS-CATALOG-OVERRIDES
+      const { data: cfgData } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', 'SYS-CATALOG-OVERRIDES')
+        .maybeSingle();
+
+      const existingAddress = cfgData?.delivery_address || {};
+      const updatedAddress = {
+        ...existingAddress,
+        launch_baseline_timestamp: launchTimestamp,
+        updated_at: launchTimestamp,
+      };
+
+      await supabase.from('orders').upsert({
+        id: 'SYS-CATALOG-OVERRIDES',
+        order_number: 'SYS-CFG',
+        customer_name: 'Savera Catalog Config',
+        customer_phone: '9999999999',
+        payment_method: 'System',
+        total_amount: 0,
+        delivery_address: updatedAddress,
+        items: [],
+      }, { onConflict: 'id' });
+
+      // 2. Mark existing test orders as Cancelled with total_amount: 0 in Supabase
+      await supabase
+        .from('orders')
+        .update({ status: 'Cancelled', payment_status: 'Cancelled', total_amount: 0, subtotal: 0 })
+        .neq('id', 'SYS-CATALOG-OVERRIDES');
+
+      // 3. Mark existing test subscriptions as Cancelled in Supabase
+      await supabase
+        .from('subscriptions')
+        .update({ status: 'Cancelled' })
+        .neq('status', 'Archived');
+    } catch (e) {
+      console.warn('Error syncing launch baseline to cloud:', e);
+    }
+
+    addToast('Live Launch Baseline Set (₹0 Revenue)', 'All pre-launch test data archived. Platform is 100% clean and ready for live customers.', 'success');
+    logAuditAction('System Reset', 'Launch Baseline', 'Super Admin reset system to live launch baseline with ₹0 revenue');
   };
 
   const cancelOrder = (orderId: string, reason?: string) => {

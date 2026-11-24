@@ -33,6 +33,7 @@ import {
   MapPin,
   Tag,
   RefreshCw,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -1333,6 +1334,18 @@ export default function AdminDashboardPage() {
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Sync Live Orders</span>
+          </button>
+          <button
+            onClick={async () => {
+              if (window.confirm("Ready for Live Launch Tomorrow?\n\nThis will reset live revenue, orders today, and active subscriptions to ₹0, archiving all pre-launch test data so tomorrow's live sales start fresh and accurate.\n\nProceed?")) {
+                await resetToFreshBaseline();
+              }
+            }}
+            className="bg-rose-950/80 hover:bg-rose-900 border border-rose-600/50 text-rose-300 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm"
+            title="Archive test orders and reset live revenue to ₹0 for launch"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Baseline (₹0 Launch Ready)</span>
           </button>
           <Link
             href="/admin/products"

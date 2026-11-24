@@ -37,3 +37,6 @@ desktop.ini
 $RECYCLE.BIN/
 
 *.tsbuildinfo
+
+scripts/
+deploy-cf.js

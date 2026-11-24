@@ -120,6 +120,7 @@ export const Footer: React.FC = () => {
               <li><Link href="/shop/prod-a2-milk" className="hover:text-white transition">A2 Desi Cow Milk</Link></li>
               <li><Link href="/shop/prod-buffalo-milk" className="hover:text-white transition">Farm Fresh Buffalo Milk</Link></li>
               <li><Link href="/shop/prod-a2-ghee" className="hover:text-white transition">A2 Vedic Bilona Ghee</Link></li>
+              <li><Link href="/shop/prod-fresh-lassi" className="hover:text-white transition">Fresh Bilona Desi Lassi</Link></li>
               <li><Link href="/shop/prod-fresh-paneer" className="hover:text-white transition">Fresh Malai Paneer</Link></li>
               <li><Link href="/shop/prod-farm-curd" className="hover:text-white transition">Farm Fresh Curd (Dahi)</Link></li>
               <li><Link href="/shop/prod-cold-mustard" className="hover:text-white transition">Cold Pressed Mustard Oil</Link></li>

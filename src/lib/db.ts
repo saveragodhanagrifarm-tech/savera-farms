@@ -1164,6 +1164,68 @@ export const SEED_PRODUCTS: Product[] = [
     isBestSeller: true,
     isFeatured: false,
   },
+  {
+    id: 'prod-fresh-lassi',
+    name: 'Fresh Bilona Desi Cow Lassi',
+    tagline: 'Traditional Churned Sweet Lassi from A2 Desi Cow Dahi',
+    category: 'Dairy',
+    subcategory: 'Lassi',
+    description: 'Handcrafted traditional lassi churned from authentic A2 Desi Cow curd using wooden bilona. Thick, velvety, and naturally refreshing, infused with crushed green cardamom and pure unrefined desi khand, topped with a luscious layer of fresh farm malai. Delivered condensation-chilled in eco-friendly vintage glass bottles every morning.',
+    ingredients: ['Pure A2 Desi Cow Dahi (Curd)', 'Traditional Desi Khand', 'Green Cardamom (Elaichi)', 'Fresh Farm Malai'],
+    fatPercentage: '4.8% - 5.5%',
+    nutritionalInfo: [
+      { label: 'Energy (per 100ml)', value: '88 kcal' },
+      { label: 'Protein', value: '3.8 g' },
+      { label: 'Fat (Natural Malai)', value: '4.5 g' },
+      { label: 'Carbohydrates', value: '8.2 g' },
+      { label: 'Calcium', value: '160 mg' },
+      { label: 'Probiotics', value: 'Live Active Lactic Cultures' },
+    ],
+    storageInstructions: 'Keep refrigerated between 2°C to 4°C. Shake well before drinking.',
+    shelfLife: '4 Days from delivery when refrigerated.',
+    manufacturingInfo: 'Freshly churned and bottled at Savera Farms Dairy Kitchen, Panchkula – Morni Foothills Belt, Haryana.',
+    origin: 'Savera Farms Organic Dairy Estate, Panchkula',
+    benefits: [
+      'Natural probiotics and digestive lactic cultures aid gut immunity and cool the body',
+      'Hand-churned with traditional wooden bilona to achieve thick, creamy, velvety texture',
+      'Sweetened solely with unrefined mineral-rich Desi Khand—zero refined white sugar',
+      'Rich in natural calcium, bioavailable proteins, and essential fat-soluble vitamins',
+      'Delivered chilled in sterilized glass bottles before 7:00 AM',
+    ],
+    howItIsMade: [
+      '01. Slow setting of pure A2 Desi Cow milk in traditional clay pots into dense curd',
+      '02. Wooden bilona bi-directional churning with organic desi khand and hand-ground cardamom',
+      '03. Layering with fresh farm malai and pouring into sanitized glass bottles',
+      '04. Chilled immediately to 4°C and dispatched in cold-chain vans for morning doorstep delivery',
+    ],
+    faqs: [
+      {
+        question: 'What is the price and packaging of Savera Lassi?',
+        answer: 'Savera Fresh Bilona Lassi is ₹80 for a 500 ml glass bottle (MRP ₹90). A family 1 Litre bottle is also available for ₹150 (MRP ₹170).',
+      },
+      {
+        question: 'Does Savera Lassi contain refined sugar or preservatives?',
+        answer: 'Never. Our lassi is sweetened only with natural unrefined Desi Khand and infused with real crushed green cardamom. It contains zero white sugar, synthetic essences, thickeners, or preservatives.',
+      },
+      {
+        question: 'Can I add Lassi to my daily morning milk subscription?',
+        answer: 'Yes! Savera Fresh Bilona Lassi is fully subscription-eligible. You can set daily, alternate day, or custom weekly deliveries alongside your morning milk in Panchkula, Chandigarh, and Mohali.',
+      },
+    ],
+    images: [
+      '/images/fresh-lassi.jpg',
+      '/images/fresh-lassi.png',
+    ],
+    variants: [
+      { id: 'var-lassi-500ml', name: '500 ml Glass Bottle', price: 80, mrp: 90, discountPct: 11, stock: 200, sku: 'SAV-DAIRY-LSI-500ML', weightVolume: '500 ml' },
+      { id: 'var-lassi-1l', name: '1 Litre Glass Bottle', price: 150, mrp: 170, discountPct: 12, stock: 120, sku: 'SAV-DAIRY-LSI-1L', weightVolume: '1 L' },
+    ],
+    rating: 4.9,
+    reviewCount: 165,
+    isSubscriptionEligible: true,
+    isBestSeller: true,
+    isFeatured: true,
+  },
 ];
 
 export const SEED_SUBSCRIPTIONS: MilkSubscription[] = [];
@@ -1171,6 +1233,22 @@ export const SEED_SUBSCRIPTIONS: MilkSubscription[] = [];
 export const SEED_ORDERS: Order[] = [];
 
 export const SEED_BATCHES: BatchItem[] = [
+  {
+    id: 'batch-lsi-1',
+    batchId: 'BATCH-20260824-LSI',
+    productId: 'prod-fresh-lassi',
+    productName: 'Fresh Bilona Desi Cow Lassi',
+    variantId: 'var-lassi-500ml',
+    variantName: '500 ml Glass Bottle',
+    productionDate: '2026-08-24',
+    expiryDate: '2026-08-28',
+    quantityProduced: 250,
+    quantitySold: 110,
+    wastage: 2,
+    unitCost: 38,
+    supplierSource: 'Savera Dairy Kitchen',
+    status: 'Fresh'
+  },
   {
     id: 'batch-buf-1',
     batchId: 'BATCH-20260824-BUF',

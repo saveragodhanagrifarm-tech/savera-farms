@@ -232,7 +232,7 @@ export default function SubscriptionsPage() {
 
                 <div className="pt-2 border-t border-savera-dark/10 flex items-center justify-between">
                   <span className="text-[11px] text-savera-brown font-medium">
-                    1L Chilled Glass Bottle
+                    {v1L?.name || 'Chilled Glass Bottle'}
                   </span>
                   <button
                     onClick={() => {
