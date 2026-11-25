@@ -33,6 +33,10 @@ export default function DeliveryExecutivePage() {
 
   useEffect(() => {
     refreshOrders();
+    const interval = setInterval(() => {
+      refreshOrders();
+    }, 20000);
+    return () => clearInterval(interval);
   }, []);
 
   const [riderEmail, setRiderEmail] = useState('');

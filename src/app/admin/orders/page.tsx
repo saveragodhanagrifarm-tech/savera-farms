@@ -12,6 +12,10 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     refreshOrders();
+    const interval = setInterval(() => {
+      refreshOrders();
+    }, 20000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredOrders = orders.filter((o) => o.id !== 'SYS-CATALOG-OVERRIDES' && (filterStatus === 'All' || o.status === filterStatus));

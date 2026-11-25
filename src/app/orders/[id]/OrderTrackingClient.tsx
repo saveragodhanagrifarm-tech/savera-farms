@@ -42,15 +42,40 @@ export default function OrderTrackingPage() {
 
   const id = resolvedId || (params?.id as string) || '';
   const router = useRouter();
-  const { orders, cancelOrder, addToCart, products, addToast } = useApp();
+  const { orders, cancelOrder, addToCart, products, refreshOrders, addToast } = useApp();
 
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('Change of plans / Travelling');
   const [dbOrder, setDbOrder] = useState<any>(null);
 
+  const mapRowToOrder = (data: any) => ({
+    id: data.id,
+    orderNumber: data.order_number,
+    customerName: data.customer_name,
+    customerPhone: data.customer_phone,
+    deliveryAddress: data.delivery_address || {},
+    items: data.items || [],
+    subtotal: data.subtotal || 0,
+    discount: data.discount || 0,
+    deliveryFee: data.delivery_fee || 0,
+    totalAmount: data.total_amount || 0,
+    paymentMethod: data.payment_method || 'Online',
+    paymentStatus: data.payment_status || 'Paid',
+    status: data.status || 'Order Placed',
+    deliveryDate: data.delivery_date,
+    deliverySlot: data.delivery_slot,
+    otp: data.otp || '4821',
+    driverName: data.driver_name || data.delivery_address?.driver_name || ((data.delivery_address?.pincode || '').startsWith('16') ? 'Gurpreet Singh (Savera Express)' : 'Ramesh Kumar (Savera Express)'),
+    driverPhone: data.driver_phone || data.delivery_address?.driver_phone || ((data.delivery_address?.pincode || '').startsWith('16') ? '+91 98222 33445' : '+91 98111 22334'),
+    createdAt: data.created_at,
+  });
+
   useEffect(() => {
-    if (id && !orders.some((o) => o.id === id || o.orderNumber === id)) {
+    if (!id) return;
+    refreshOrders();
+
+    const fetchLatest = () => {
       supabase
         .from('orders')
         .select('*')
@@ -58,33 +83,43 @@ export default function OrderTrackingPage() {
         .maybeSingle()
         .then(({ data }) => {
           if (data) {
-            setDbOrder({
-              id: data.id,
-              orderNumber: data.order_number,
-              customerName: data.customer_name,
-              customerPhone: data.customer_phone,
-              deliveryAddress: data.delivery_address || {},
-              items: data.items || [],
-              subtotal: data.subtotal || 0,
-              discount: data.discount || 0,
-              deliveryFee: data.delivery_fee || 0,
-              totalAmount: data.total_amount || 0,
-              paymentMethod: data.payment_method || 'Online',
-              paymentStatus: data.payment_status || 'Paid',
-              status: data.status || 'Order Placed',
-              deliveryDate: data.delivery_date,
-              deliverySlot: data.delivery_slot,
-              otp: data.otp || '4821',
-              driverName: data.driver_name || 'Ramesh Kumar (Savera Delivery Partner)',
-              driverPhone: data.driver_phone || '+91 98112 33445',
-              createdAt: data.created_at,
-            });
+            setDbOrder(mapRowToOrder(data));
           }
         });
-    }
-  }, [id, orders]);
+    };
 
-  const order = orders.find((o) => o.id === id || o.orderNumber === id) || dbOrder || null;
+    fetchLatest();
+
+    // Supabase Realtime channel for live order updates
+    const channel = supabase
+      .channel(`realtime-order-tracking-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+        },
+        (payload: any) => {
+          const row = payload.new;
+          if (row && (row.id === id || row.order_number === id)) {
+            setDbOrder(mapRowToOrder(row));
+            refreshOrders();
+          }
+        }
+      )
+      .subscribe();
+
+    const pollInterval = setInterval(fetchLatest, 15000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
+  }, [id]);
+
+  const localOrder = orders.find((o) => o.id === id || o.orderNumber === id);
+  const order = dbOrder ? { ...(localOrder || {}), ...dbOrder } : localOrder || null;
 
   if (!order) {
     return (

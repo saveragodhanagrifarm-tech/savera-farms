@@ -418,6 +418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs(getStoredData('savera_audit_v2', SEED_AUDIT_LOGS));
     setReviews(getStoredData('savera_reviews_v2', SEED_REVIEWS));
     isHydrated.current = true;
+    refreshOrders();
 
     return () => {
       window.removeEventListener('storage', handleSync);
@@ -1319,7 +1320,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const updated = prev.map((o) => {
         if (o.id === orderId || o.orderNumber === orderId) {
           const isCodDelivered = (status === 'Delivered' && o.paymentMethod === 'Cash on Delivery');
-          const pStatus = isCodDelivered ? 'Paid' as const : o.paymentStatus;
+          const isCancelled = status === 'Cancelled' || status === 'Refunded';
+          const pStatus = isCodDelivered
+            ? ('Paid' as const)
+            : (isCancelled && o.paymentStatus === 'Paid' ? ('Refunded' as const) : o.paymentStatus);
           updatedPaymentStatus = pStatus;
           return { ...o, status, paymentStatus: pStatus, updatedAt: new Date().toISOString() };
         }
@@ -1337,6 +1341,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const updatePayload: any = { status };
       if (status === 'Delivered') {
         updatePayload.payment_status = 'Paid';
+      } else if (updatedPaymentStatus === 'Refunded') {
+        updatePayload.payment_status = 'Refunded';
       }
       supabase.from('orders').update(updatePayload).or(`id.eq.${orderId},order_number.eq.${orderId}`).then();
     } catch (e) {}
@@ -1408,14 +1414,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const cancelOrder = (orderId: string, reason?: string) => {
+    let refundedAmount = 0;
     setOrders((prev) => {
-      const updated = prev.map((o) => (o.id === orderId || o.orderNumber === orderId ? { ...o, status: 'Cancelled' as const, updatedAt: new Date().toISOString() } : o));
+      const updated = prev.map((o) => {
+        if (o.id === orderId || o.orderNumber === orderId) {
+          if (o.status !== 'Cancelled') {
+            if (o.paymentMethod === 'Wallets' && o.totalAmount > 0) {
+              refundedAmount = o.totalAmount;
+            }
+          }
+          const nextPaymentStatus = o.paymentStatus === 'Paid' ? ('Refunded' as const) : o.paymentStatus;
+          return {
+            ...o,
+            status: 'Cancelled' as const,
+            paymentStatus: nextPaymentStatus,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return o;
+      });
       if (typeof window !== 'undefined') {
         localStorage.setItem('savera_orders_v3', JSON.stringify(updated));
         window.dispatchEvent(new CustomEvent('savera-orders-updated'));
       }
       return updated;
     });
+
+    if (refundedAmount > 0) {
+      const newBal = customer.walletBalance + refundedAmount;
+      setCustomer((prev) => {
+        const updatedBal = prev.walletBalance + refundedAmount;
+        if (typeof window !== 'undefined' && user?.id) {
+          localStorage.setItem(`savera_user_wallet_${user.id}`, JSON.stringify(updatedBal));
+        }
+        return {
+          ...prev,
+          walletBalance: updatedBal,
+        };
+      });
+      const refundTx: WalletTransaction = {
+        id: `TX-REFUND-${Date.now()}`,
+        customerId: user?.id || customer.id || 'cust-user',
+        type: 'Credit',
+        amount: refundedAmount,
+        balanceAfter: newBal,
+        description: `Refund for Cancelled Order #${orderId}`,
+        referenceId: orderId,
+        createdAt: new Date().toISOString(),
+      };
+      setWalletTransactions((prev) => {
+        const updated = [refundTx, ...prev];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('savera_wallet_tx_v3', JSON.stringify(updated));
+        }
+        return updated;
+      });
+      addToast('Wallet Refund Credited', `₹${refundedAmount} has been refunded to your Savera Wallet.`, 'success');
+    }
+
     addToast('Order Cancelled', `Order ${orderId} has been cancelled.`, 'info');
     logAuditAction('Order Cancelled', orderId, reason || 'Customer requested cancellation');
     try {
